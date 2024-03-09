@@ -1,0 +1,6 @@
+---
+pagetitle: KDE Analysis | Capstone
+title: KDE Analysis (1)
+---
+
+![](/Images/3.png)

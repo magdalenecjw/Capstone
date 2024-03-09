@@ -1,0 +1,6 @@
+---
+pagetitle: NKDE Analysis | Capstone
+title: NKDE Analysis (1)
+---
+
+![](/Images/4.png)

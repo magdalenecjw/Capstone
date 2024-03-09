@@ -1,0 +1,132 @@
+---
+pagetitle: "Capstone Journey"
+page-layout: custom
+section-divs: false
+editor: source
+sidebar: false
+search: false
+description: | 
+  A showcase for my capstone project journey.
+image: images/logo.png
+listing:
+
+  - id: Setup
+    contents: 
+    - /Analysis/Setup/LitReview.qmd
+    - /Analysis/Setup/DataPrep.qmd
+    - "!index.qmd"
+    type: grid
+    categories: false
+    sort-ui: false
+    filter-ui: false
+    max-items: 3
+    feed: false
+
+  - id: KDE
+    contents: 
+    - /Analysis/KDE/Week1.qmd
+    - "!index.qmd"
+    type: grid
+    categories: false
+    sort-ui: false
+    filter-ui: false
+    max-items: 3
+    feed: false
+
+  - id: NKDE
+    contents: 
+    - /Analysis/NKDE/Week1.qmd
+    - "!index.qmd"
+    type: grid
+    categories: false
+    sort-ui: false
+    filter-ui: false
+    max-items: 3
+    feed: false
+
+  - id: TNKDE
+    contents: 
+    - /Analysis/TNKDE/Week1.qmd
+    - "!index.qmd"
+    type: grid
+    categories: false
+    sort-ui: false
+    filter-ui: false
+    max-items: 3
+    feed: false
+    
+toc: false
+---
+
+::: {.header-text} 
+::: {.content-container}
+::: {.header-block}
+<br/>
+This blog maps the journey of my capstone project dedicated to revolutionizing spatial point pattern analysis (SPPA) in networked environments. Conventional methods like Kernel Density Estimation (KDE) and Temporal KDE often overlook spatial constraints inherent in real-world events, such as traffic accidents or GPS trajectories confined by road networks. Enter Network KDE (NKDE) and Temporal Network KDE (TNKDE), advanced techniques tailored for networked settings, promising a more accurate depiction of spatial events and their temporal dynamics. This study focuses on analyzing ride density in Singapore, employing 1st Order SPPA methods of KDE, NKDE, and TNKDE to identify high-concentration regions of online ride-hailing trips. Join me in exploring the untapped potential of spatial pattern analysis within networked contexts.
+:::
+:::
+:::
+
+::: {.content-container}
+::: {.listing-block}
+<a href="Analysis/Setup/index.qmd">
+
+## Setting Up
+</a> 
+
+::: {#Setup}
+:::
+
+:::
+:::
+
+::: {.content-container}
+::: {.listing-block}
+<a href="Analysis/KDE/index.qmd">
+
+## Spatial KDE 
+</a>
+
+::: {#KDE}
+:::
+
+:::
+:::
+
+::: {.content-container}
+::: {.listing-block}
+<a href="Analysis/NKDE/index.qmd">
+
+## Network KDE 
+</a>
+
+::: {#NKDE}
+:::
+
+:::
+:::
+
+::: {.content-container}
+::: {.listing-block}
+<a href="Analysis/TNKDE/index.qmd">
+
+## Temporal Network KDE 
+</a>
+
+::: {#TNKDE}
+:::
+
+:::
+:::
+
+::: {.footer-text}
+::: {.footer-container .black-background}
+::: {.footer-block}
+
+Layout customised from <a href="https://realworlddatascience.net/">
+Real World Data Science
+</a>
+
+:::
+:::
+:::

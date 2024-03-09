@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss  xmlns:atom="http://www.w3.org/2005/Atom" 
+      xmlns:media="http://search.yahoo.com/mrss/" 
+      xmlns:content="http://purl.org/rss/1.0/modules/content/" 
+      xmlns:dc="http://purl.org/dc/elements/1.1/" 
+      version="2.0">
+<channel>
+<title>Capstone Journey</title>
+<link>https://capstonejourney.netlify.app/Analysis/TNKDE/index.html</link>
+<atom:link href="https://capstonejourney.netlify.app/Analysis/TNKDE/index.xml" rel="self" type="application/rss+xml"/>
+<description></description>
+<image>
+<url>https://capstonejourney.netlify.app/Images/logo.png</url>
+<title>Capstone Journey</title>
+<link>https://capstonejourney.netlify.app/Analysis/TNKDE/index.html</link>
+<height>144</height>
+<width>144</width>
+</image>
+<generator>quarto-1.3.450</generator>
+<lastBuildDate>Sat, 09 Mar 2024 05:36:41 GMT</lastBuildDate>
+<item>
+  <title>TNKDE Analysis (1)</title>
+  <link>https://capstonejourney.netlify.app/Analysis/TNKDE/Week1.html</link>
+  <description><![CDATA[ 
+
+
+
+<p><img src="https://capstonejourney.netlify.app/Images/5.png" class="img-fluid"></p>
+
+
+
+ ]]></description>
+  <guid>https://capstonejourney.netlify.app/Analysis/TNKDE/Week1.html</guid>
+  <pubDate>Sat, 09 Mar 2024 05:36:41 GMT</pubDate>
+</item>
+</channel>
+</rss>

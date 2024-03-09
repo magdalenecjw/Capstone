@@ -1,0 +1,6 @@
+---
+pagetitle: Data Preparation | Setting Up | Capstone
+title: Data Preparation
+---
+
+![](/Images/2.png)

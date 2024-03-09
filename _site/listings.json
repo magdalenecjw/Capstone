@@ -1,0 +1,37 @@
+[
+  {
+    "listing": "/index.html",
+    "items": [
+      "/Analysis/Setup/DataPrep.html",
+      "/Analysis/Setup/LitReview.html",
+      "/Analysis/KDE/Week1.html",
+      "/Analysis/NKDE/Week1.html",
+      "/Analysis/TNKDE/Week1.html"
+    ]
+  },
+  {
+    "listing": "/Analysis/TNKDE/index.html",
+    "items": [
+      "/Analysis/TNKDE/Week1.html"
+    ]
+  },
+  {
+    "listing": "/Analysis/Setup/index.html",
+    "items": [
+      "/Analysis/Setup/DataPrep.html",
+      "/Analysis/Setup/LitReview.html"
+    ]
+  },
+  {
+    "listing": "/Analysis/KDE/index.html",
+    "items": [
+      "/Analysis/KDE/Week1.html"
+    ]
+  },
+  {
+    "listing": "/Analysis/NKDE/index.html",
+    "items": [
+      "/Analysis/NKDE/Week1.html"
+    ]
+  }
+]

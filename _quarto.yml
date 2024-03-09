@@ -1,0 +1,67 @@
+project:
+  type: website
+
+website:
+  title: "Capstone Journey"
+  image: Images/logo.png
+  favicon: Images/favicon_small.png
+  open-graph: true
+  site-url: https://capstonejourney.netlify.app/
+  repo-url: https://github.com/magdalenecjw/Capstone
+  navbar:
+    background: "#f0eeeb"
+    logo: Images/logo.png
+    logo-alt: "Capstone Journey"
+    title: false
+    collapse-below: lg
+    right:
+      - text: "Setup"
+        menu: 
+        - text: "Literature Review"
+          href: Analysis/Setup/LitReview.qmd
+        - text: "Data Preparation"
+          href: Analysis/Setup/DataPrep.qmd
+      - text: "Analysis"
+        menu: 
+        - text: "KDE"
+          href: Analysis/KDE/index.qmd
+        - text: "NKDE"
+          href: Analysis/NKDE/index.qmd
+        - text: "TNKDE"
+          href: Analysis/TNKDE/index.qmd
+
+  page-navigation: true
+
+  back-to-top-navigation: false
+
+  page-footer:
+    background: "#000000"
+    center:  
+      - href: https://capstonejourney.netlify.app/
+        icon: house-fill
+        aria-label: Home
+      - href: https://github.com/magdalenecjw/Capstone
+        icon: github
+        aria-label: GitHub
+      - href: https://public.tableau.com/app/profile/magdalene.chan
+        icon: bar-chart-fill
+        aria-label: Tableau
+      - href: https://www.linkedin.com/in/chanmagdalene/
+        icon: linkedin
+        aria-label: LinkedIn
+      - href: mailto:jwchan.2021@mitb.smu.edu.sg
+        icon: envelope-fill
+        aria-label: Email
+
+format:
+  html:
+    theme: [lux, styles.scss]
+    css: styles.css
+    toc: true
+    grid:
+      sidebar-width: 0px
+      body-width: 1000px
+      margin-width: 250px
+
+execute: 
+  freeze: auto
