@@ -3,4 +3,81 @@ pagetitle: KDE Analysis | Capstone
 title: KDE Analysis (1)
 ---
 
-![](/Images/3.png)
+![](../../Images/3.png){width="500"}
+
+# Getting Started
+
+The code chunk below uses `p_load()` function of pacman package to check if the required packages have been installed on the computer. If they are, the packages will be launched.
+
+The packages used are: 
+
+- sf package is used for importing, managing, and processing geospatial data. 
+- tidyverse package for aspatial data wrangling. 
+- spatstat package to perform 1st-order spatial point patterns analysis and derive kernel density estimation (KDE) layer.
+
+```{r}
+pacman::p_load(sf, sp, tidyverse, spatstat, tmap)
+```
+
+In the code chunk below, the [cleaned data files](DataPrep.qmd) are loaded into R.
+
+```{r}
+# Load base map
+mpsz = st_read(dsn = "../data/geospatial", 
+               layer = "MPSZ-2019") %>%
+  st_transform(crs = 3414)
+
+# Load rds file
+pickup_sf <- st_as_sf(read_rds("../data/rds/pickup_sf.rds"))
+dropoff_sf <- st_as_sf(read_rds("../data/rds/dropoff_sf.rds"))
+```
+
+# Convert Pickup and Dropoff location sf dataframes into spatstat’s ppp object format
+
+Convert the sf dataframe to a ppp object using `as.ppp()` function from the spatstat package. The result is a marked planar point pattern. To change a marked planar point pattern to just a planar point pattern, simply remove the marks associated with each point using `marks(pickup_ppp) <- NULL`.
+
+```{r}
+pickup_ppp <- as.ppp(pickup_sf)
+marks(pickup_ppp) <- NULL
+
+plot(pickup_ppp)
+```
+
+```{r}
+dropoff_ppp <- as.ppp(dropoff_sf)
+marks(dropoff_ppp) <- NULL
+
+plot(dropoff_ppp)
+```
+
+```{r}
+# Create border of Singapore's land area
+mpsz_border <- st_cast(mpsz %>%
+                         summarize(), "POLYGON")
+
+# Convert the resulting sf object to an owin object
+mpsz_owin <- as.owin(mpsz_border)
+
+plot(mpsz_owin)
+```
+
+```{r}
+pickup_owin = pickup_ppp[mpsz_owin]
+pickup_owin <- rescale(pickup_owin, 1000, "km")
+
+pickup_kde <- density(pickup_owin, sigma=bw.diggle, edge=TRUE, kernel="gaussian") 
+
+plot(pickup_kde)
+```
+
+```{r}
+dropoff_owin = dropoff_ppp[mpsz_owin]
+dropoff_owin <- rescale(dropoff_owin, 1000, "km")
+
+dropoff_kde <- density(dropoff_owin, sigma=bw.diggle, edge=TRUE, kernel="gaussian") 
+
+plot(dropoff_kde)
+```
+
+
+

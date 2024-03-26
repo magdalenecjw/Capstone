@@ -17,21 +17,267 @@
 <width>144</width>
 </image>
 <generator>quarto-1.3.450</generator>
-<lastBuildDate>Sat, 09 Mar 2024 05:53:26 GMT</lastBuildDate>
+<lastBuildDate>Fri, 08 Mar 2024 16:00:00 GMT</lastBuildDate>
 <item>
   <title>Data Preparation</title>
+  <dc:creator>Magdalene Chan</dc:creator>
   <link>https://capstonejourney.netlify.app/Analysis/Setup/DataPrep.html</link>
   <description><![CDATA[ 
 
 
 
-<p><img src="https://capstonejourney.netlify.app/Images/2.png" class="img-fluid"></p>
+<p><img src="https://capstonejourney.netlify.app/Images/2.png" class="img-fluid" width="500"></p>
+<section id="getting-started" class="level1">
+<h1>Getting Started</h1>
+<p>The code chunk below uses <code>p_load()</code> function of pacman package to check if the required packages have been installed on the computer. If they are, the packages will be launched.</p>
+<p>The packages used are: - arrow package to read and write Parquet files, which is the format that our source data is in. - fs package for smoother file handling. - tidyverse package for aspatial data wrangling. - lubridate package to handle date and time data. - data.table package for fast aggregation of large datasets.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1">pacman<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">::</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">p_load</span>(arrow, fs, tidyverse, lubridate, data.table)</span></code></pre></div>
+</details>
+</div>
+<p>The dataset is provided by Grab over 10 separate files (in Apache Parquet file format), with each trajectory ID (primary identifier of each trip) found in multiple files. There is a need to join the 10 files before performing any further data wrangling. In the code chunk below, <code>read_parquet()</code> from arrow package is used to read the Parquet files. As there are 10 such files, a loop function is used to load each Parquet file within the file directory and stored into a list, which is finally then merged using <code>bind_rows()</code> function from dplyr package. Lastly, as the <code>pingtimestamp</code> field is in integer format, it is converted into date-time format using <code>as_datetime()</code> function of lubridate package</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># List Parquet files in the directory</span></span>
+<span id="cb2-2">parquet_files <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">dir_ls</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"../data/"</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">regexp =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">\\</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">.parquet$"</span>)</span>
+<span id="cb2-3"></span>
+<span id="cb2-4"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Initialize an empty list to store dataframes</span></span>
+<span id="cb2-5">dfs <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">list</span>()</span>
+<span id="cb2-6"></span>
+<span id="cb2-7"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Loop through each Parquet file, read it, and store in the list</span></span>
+<span id="cb2-8"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">for</span> (file_path <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">in</span> parquet_files) {</span>
+<span id="cb2-9">  df <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">read_parquet</span>(file_path)</span>
+<span id="cb2-10">  dfs <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">append</span>(dfs, <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">list</span>(df))</span>
+<span id="cb2-11">}</span>
+<span id="cb2-12"></span>
+<span id="cb2-13"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Combine individual dataframes into one dataframe</span></span>
+<span id="cb2-14">grab <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">bind_rows</span>(dfs) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb2-15">  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Convert pingtimestamp column to date-time format</span></span>
+<span id="cb2-16">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">mutate</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">pingtimestamp =</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">as_datetime</span>(pingtimestamp))</span>
+<span id="cb2-17"></span>
+<span id="cb2-18"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Remove objects that will no longer be used</span></span>
+<span id="cb2-19"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">rm</span>(df, dfs, file_path, parquet_files)</span></code></pre></div>
+</details>
+</div>
+<p>For sorting a large tibble data frame efficiently in R, while dplyr package offers the <code>arrange()</code> function, it typically does not perform the task as quickly as <code>setorder()</code> function of data.table package. data.table package often offers better performance for sorting large datasets due to its efficient memory management and optimized algorithms.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Set tibble dataframe as data.table </span></span>
+<span id="cb3-2"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Then sort by trajectory ID and pingtimestamp</span></span>
+<span id="cb3-3">grab_sorted <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">setorder</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">as.data.table</span>(grab), trj_id, pingtimestamp)</span>
+<span id="cb3-4"></span>
+<span id="cb3-5"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Convert back to tibble dataframe</span></span>
+<span id="cb3-6">grab_sorted <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">as_tibble</span>(grab_sorted)</span>
+<span id="cb3-7"></span>
+<span id="cb3-8"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Remove objects that will no longer be used</span></span>
+<span id="cb3-9"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">rm</span>(grab)</span></code></pre></div>
+</details>
+</div>
+</section>
+<section id="data-wrangling" class="level1">
+<h1>Data Wrangling</h1>
+<p>There is a need to identify the Pick-up locations. In the code chunk below, <code>group_by()</code> function of dplyr package is used to group the data by trajectory ID, before taking the GPS coordinates (latitude and longitude) of the earliest GPS ping timestamp using <code>filter()</code> and <code>min()</code> function.</p>
+<p>Similar steps are then performed to identify the Drop-off locations. <code>group_by()</code> function of dplyr package is used to group the data by trajectory ID, before taking the GPS coordinates (latitude and longitude) of the latest GPS ping timestamp using <code>filter()</code> and <code>max()</code> function.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Identify Pick-up locations</span></span>
+<span id="cb4-2">pickup_loc <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> grab_sorted <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb4-3">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">group_by</span>(trj_id) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb4-4">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">filter</span>(pingtimestamp <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">==</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">min</span>(pingtimestamp)) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb4-5">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">ungroup</span>() <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb4-6">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">select</span>(trj_id, rawlat, rawlng) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb4-7">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">rename</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">pickup_lat =</span> rawlat,</span>
+<span id="cb4-8">         <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">pickup_lng =</span> rawlng)</span>
+<span id="cb4-9"></span>
+<span id="cb4-10"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Identify Drop-off locations</span></span>
+<span id="cb4-11">dropoff_loc <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> grab_sorted <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb4-12">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">group_by</span>(trj_id) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb4-13">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">filter</span>(pingtimestamp <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">==</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">max</span>(pingtimestamp)) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb4-14">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">ungroup</span>() <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb4-15">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">select</span>(trj_id, rawlat, rawlng) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb4-16">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">rename</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">dropoff_lat =</span> rawlat,</span>
+<span id="cb4-17">         <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">dropoff_lng =</span> rawlng)</span>
+<span id="cb4-18"></span>
+<span id="cb4-19"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Merge both pick-up and drop-off locations into a O-D flow</span></span>
+<span id="cb4-20">grab_odflow <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> pickup_loc <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb4-21">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">left_join</span>(dropoff_loc, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">by =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"trj_id"</span>)</span></code></pre></div>
+</details>
+</div>
+</section>
+<section id="map-matching" class="level1">
+<h1>Map Matching</h1>
+<p>Given that our dataset is based on GPS pings from drivers’ phones while in transit, the coordinates captured for any given GPS ping may not accurately reflect a point on the road network. As such, there is a need to perform “snapping” or map matching, which is the process of aligning the spatial point events with the nearest points on the network.</p>
+<p>Map matching will be continued in the <a href="../../Analysis/Setup/MapMatching.html">next article</a>.</p>
 
 
+</section>
 
  ]]></description>
   <guid>https://capstonejourney.netlify.app/Analysis/Setup/DataPrep.html</guid>
-  <pubDate>Sat, 09 Mar 2024 05:53:26 GMT</pubDate>
+  <pubDate>Fri, 08 Mar 2024 16:00:00 GMT</pubDate>
 </item>
 <item>
   <title>Literature Review</title>
@@ -46,7 +292,7 @@
 
  ]]></description>
   <guid>https://capstonejourney.netlify.app/Analysis/Setup/LitReview.html</guid>
-  <pubDate>Sat, 09 Mar 2024 05:53:26 GMT</pubDate>
+  <pubDate>Sat, 09 Mar 2024 09:31:50 GMT</pubDate>
 </item>
 </channel>
 </rss>

@@ -1,0 +1,14 @@
+{
+  "hash": "51b2de3d77803c4cd0228420bdbe3924",
+  "result": {
+    "markdown": "---\npagetitle: Map Matching | Setting Up | Capstone\ntitle: Map Matching\nauthor: \"Magdalene Chan\"\ndate: 2024-03-09\nexecute: \n  warning: false\nformat:\n  html:\n    code-fold: true\n---\n\n\n![](/Images/2.png){width=\"500\"}\n\n# Getting Started\n\nThe code chunk below uses `p_load()` function of pacman package to check if the required packages have been installed on the computer. If they are, the packages will be launched.\n\nThe packages used are: - sf package is used for importing, managing, and processing geospatial data. - tidyverse package for aspatial data wrangling. - data.table package for fast aggregation of large datasets.\n\n\n::: {.cell}\n\n```{.r .cell-code}\npacman::p_load(sf, tidyverse, data.table)\n```\n:::\n\n\nIn the code chunk below, the [cleaned data file](DataPrep.qmd) is loaded into R.\n\n\n::: {.cell}\n\n```{.r .cell-code}\n# Load rds file instead of rendering the above code chunks\ngrab_sorted <- read_rds(\"../data/rds/grab_sorted.rds\")\ngrab_odflow <- read_rds(\"../data/rds/grab_odflow.rds\")\n```\n:::\n\n\n# Map Matching\n\nGiven that our dataset is based on GPS pings from drivers’ phones while in transit, the coordinates captured for any given GPS ping may not accurately reflect a point on the road network. As such, there is a need to perform “snapping” or map matching, which is the process of aligning the spatial point events with the nearest points on the network.\n\nMap matching will be continued in the next article.\n",
+    "supporting": [],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}

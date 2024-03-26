@@ -13,11 +13,9 @@
 <url>https://capstonejourney.netlify.app/Images/logo.png</url>
 <title>Capstone Journey</title>
 <link>https://capstonejourney.netlify.app/Analysis/KDE/index.html</link>
-<height>144</height>
-<width>144</width>
 </image>
 <generator>quarto-1.3.450</generator>
-<lastBuildDate>Sat, 09 Mar 2024 05:53:23 GMT</lastBuildDate>
+<lastBuildDate>Tue, 26 Mar 2024 14:37:11 GMT</lastBuildDate>
 <item>
   <title>KDE Analysis (1)</title>
   <link>https://capstonejourney.netlify.app/Analysis/KDE/Week1.html</link>
@@ -25,13 +23,242 @@
 
 
 
-<p><img src="https://capstonejourney.netlify.app/Images/3.png" class="img-fluid"></p>
+<p><img src="https://capstonejourney.netlify.app/Images/3.png" class="img-fluid" width="500"></p>
+<section id="getting-started" class="level1">
+<h1>Getting Started</h1>
+<p>The code chunk below uses <code>p_load()</code> function of pacman package to check if the required packages have been installed on the computer. If they are, the packages will be launched.</p>
+<p>The packages used are:</p>
+<ul>
+<li>sf package is used for importing, managing, and processing geospatial data.</li>
+<li>tidyverse package for aspatial data wrangling.</li>
+<li>spatstat package to perform 1st-order spatial point patterns analysis and derive kernel density estimation (KDE) layer.</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1">pacman<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">::</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">p_load</span>(sf, sp, tidyverse, spatstat, tmap)</span></code></pre></div>
+</div>
+<p>In the code chunk below, the <a href="DataPrep.qmd">cleaned data files</a> are loaded into R.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Load base map</span></span>
+<span id="cb2-2">mpsz <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">=</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">st_read</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">dsn =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"../data/geospatial"</span>, </span>
+<span id="cb2-3">               <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">layer =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"MPSZ-2019"</span>) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb2-4">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">st_transform</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">crs =</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3414</span>)</span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Reading layer `MPSZ-2019' from data source 
+  `C:\magdalenecjw\Capstone\Analysis\data\geospatial' using driver `ESRI Shapefile'
+Simple feature collection with 332 features and 6 fields
+Geometry type: MULTIPOLYGON
+Dimension:     XY
+Bounding box:  xmin: 103.6057 ymin: 1.158699 xmax: 104.0885 ymax: 1.470775
+Geodetic CRS:  WGS 84</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Load rds file</span></span>
+<span id="cb4-2">pickup_sf <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">st_as_sf</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">read_rds</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"../data/rds/pickup_sf.rds"</span>))</span>
+<span id="cb4-3">dropoff_sf <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">st_as_sf</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">read_rds</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"../data/rds/dropoff_sf.rds"</span>))</span></code></pre></div>
+</div>
+</section>
+<section id="convert-pickup-and-dropoff-location-sf-dataframes-into-spatstats-ppp-object-format" class="level1">
+<h1>Convert Pickup and Dropoff location sf dataframes into spatstat’s ppp object format</h1>
+<p>Convert the sf dataframe to a ppp object using <code>as.ppp()</code> function from the spatstat package. The result is a marked planar point pattern. To change a marked planar point pattern to just a planar point pattern, simply remove the marks associated with each point using <code>marks(pickup_ppp) &lt;- NULL</code>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1">pickup_ppp <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">as.ppp</span>(pickup_sf)</span>
+<span id="cb5-2"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">marks</span>(pickup_ppp) <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">NULL</span></span>
+<span id="cb5-3"></span>
+<span id="cb5-4"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(pickup_ppp)</span></code></pre></div>
+<div class="cell-output-display">
+<p><img src="https://capstonejourney.netlify.app/Analysis/KDE/Week1_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1">dropoff_ppp <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">as.ppp</span>(dropoff_sf)</span>
+<span id="cb6-2"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">marks</span>(dropoff_ppp) <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">NULL</span></span>
+<span id="cb6-3"></span>
+<span id="cb6-4"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(dropoff_ppp)</span></code></pre></div>
+<div class="cell-output-display">
+<p><img src="https://capstonejourney.netlify.app/Analysis/KDE/Week1_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Create border of Singapore's land area</span></span>
+<span id="cb7-2">mpsz_border <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">st_cast</span>(mpsz <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb7-3">                         <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">summarize</span>(), <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"POLYGON"</span>)</span>
+<span id="cb7-4"></span>
+<span id="cb7-5"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Convert the resulting sf object to an owin object</span></span>
+<span id="cb7-6">mpsz_owin <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">as.owin</span>(mpsz_border)</span>
+<span id="cb7-7"></span>
+<span id="cb7-8"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(mpsz_owin)</span></code></pre></div>
+<div class="cell-output-display">
+<p><img src="https://capstonejourney.netlify.app/Analysis/KDE/Week1_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1">pickup_owin <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">=</span> pickup_ppp[mpsz_owin]</span>
+<span id="cb8-2">pickup_owin <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">rescale</span>(pickup_owin, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1000</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"km"</span>)</span>
+<span id="cb8-3"></span>
+<span id="cb8-4">pickup_kde <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">density</span>(pickup_owin, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">sigma=</span>bw.diggle, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">edge=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">kernel=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"gaussian"</span>) </span>
+<span id="cb8-5"></span>
+<span id="cb8-6"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(pickup_kde)</span></code></pre></div>
+<div class="cell-output-display">
+<p><img src="https://capstonejourney.netlify.app/Analysis/KDE/Week1_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1">dropoff_owin <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">=</span> dropoff_ppp[mpsz_owin]</span>
+<span id="cb9-2">dropoff_owin <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">rescale</span>(dropoff_owin, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1000</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"km"</span>)</span>
+<span id="cb9-3"></span>
+<span id="cb9-4">dropoff_kde <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">density</span>(dropoff_owin, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">sigma=</span>bw.diggle, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">edge=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">kernel=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"gaussian"</span>) </span>
+<span id="cb9-5"></span>
+<span id="cb9-6"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(dropoff_kde)</span></code></pre></div>
+<div class="cell-output-display">
+<p><img src="https://capstonejourney.netlify.app/Analysis/KDE/Week1_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
 
 
+</section>
 
  ]]></description>
   <guid>https://capstonejourney.netlify.app/Analysis/KDE/Week1.html</guid>
-  <pubDate>Sat, 09 Mar 2024 05:53:23 GMT</pubDate>
+  <pubDate>Tue, 26 Mar 2024 14:37:11 GMT</pubDate>
 </item>
 </channel>
 </rss>

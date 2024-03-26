@@ -16,10 +16,9 @@
     ]
   },
   {
-    "listing": "/Analysis/Setup/index.html",
+    "listing": "/Analysis/NKDE/index.html",
     "items": [
-      "/Analysis/Setup/DataPrep.html",
-      "/Analysis/Setup/LitReview.html"
+      "/Analysis/NKDE/Week1.html"
     ]
   },
   {
@@ -29,9 +28,10 @@
     ]
   },
   {
-    "listing": "/Analysis/NKDE/index.html",
+    "listing": "/Analysis/Setup/index.html",
     "items": [
-      "/Analysis/NKDE/Week1.html"
+      "/Analysis/Setup/DataPrep.html",
+      "/Analysis/Setup/LitReview.html"
     ]
   }
 ]

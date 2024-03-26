@@ -1,6 +1,244 @@
 ---
 pagetitle: Data Preparation | Setting Up | Capstone
 title: Data Preparation
+author: "Magdalene Chan"
+date: 2024-03-09
+execute: 
+  warning: false
+format:
+  html:
+    code-fold: true
 ---
 
-![](/Images/2.png)
+![](../../Images/2.png){width="500"}
+
+# Getting Started
+
+The code chunk below uses `p_load()` function of pacman package to check if the required packages have been installed on the computer. If they are, the packages will be launched.
+
+The packages used are:
+
+-   arrow package to read and write Parquet files, which is the format that our source data is in.
+-   fs package for smoother file handling.
+-   tidyverse package for aspatial data wrangling.
+-   lubridate package to handle date and time data.
+-   data.table package for fast aggregation of large datasets.
+-   sf package is used for importing, managing, and processing geospatial data.
+-   stplanr package is used to create and plot desire lines on maps.
+-   tmap package is used to visualize geospatial data on maps.
+
+```{r}
+pacman::p_load(arrow, fs, tidyverse, lubridate, data.table, sf, stplanr, tmap)
+```
+
+# Preparing base map
+
+The basemap is created using the URA Master Plan 2019, which includes sub-zone boundaries in Singapore. The code chunk below uses `st_read()` function of sf package to import MPSZ-2019 shapefile into R as a polygon feature data frame. As this set of geospatial data is in WGS-84 coordinate system, `st_transform()` function is used to convert it to the svy21 projected coordinate system (`crs = 3414`) that Singapore uses.
+
+```{r}
+mpsz = st_read(dsn = "../data/geospatial", 
+               layer = "MPSZ-2019") %>%
+  st_transform(crs = 3414)
+```
+
+`qtm()` function of tmap package is then used to plot a simple choropleth map to visualise the subzone boundaries.
+
+```{r}
+tmap_mode("plot")
+qtm(mpsz)
+```
+
+Given that this geospatial dataset only has subzone boundaries without road network lines, there is a need to integrate the latter into the dataset to create a more comprehensive base map. The code chunk below uses `st_read()` function of sf package to import the OpenStreetMap \> Asia \> Malaysia, Singapore and Brunei shapefile extract from the [GeoFabrik website](https://download.geofabrik.de/). As this set of geospatial data is in WGS-84 coordinate system, `st_transform()` function is used to convert it to the svy21 projected coordinate system (`crs = 3414`) that Singapore uses.
+
+```{r}
+#| eval: false
+roads = st_read(dsn = "../data/geospatial", 
+               layer = "gis_osm_roads_free_1") %>%
+  st_transform(crs = 3414)
+
+mpsz_road <- mpsz %>%
+  st_intersection(roads)
+```
+
+```{r}
+#| echo: false
+#| eval: false
+# Save the output as rds file instead of rendering the above code chunks
+write_rds(mpsz_road, "../data/rds/mpsz_road.rds")
+```
+
+```{r}
+#| echo: false
+# Load rds file instead of rendering the above code chunks
+mpsz_road <- read_rds("../data/rds/mpsz_road.rds")
+```
+
+`tm_shape()` and `tm_lines()` functions of tmap package are then used to plot a simple choropleth map to visualise the roads within various planning subzones.
+
+```{r}
+tm_shape(mpsz_road %>%
+           filter(PLN_AREA_N == "ORCHARD")) + 
+  tm_lines()
+```
+
+#Loading Grab dataset
+
+The dataset is provided by Grab over 10 separate files (in Apache Parquet file format), with each trajectory ID (primary identifier of each trip) found in multiple files. There is a need to join the 10 files before performing any further data wrangling. In the code chunk below, `read_parquet()` from arrow package is used to read the Parquet files. As there are 10 such files, a loop function is used to load each Parquet file within the file directory and stored into a list, which is finally then merged using `bind_rows()` function from dplyr package. Lastly, as the `pingtimestamp` field is in integer format, it is converted into date-time format using `as_datetime()` function of lubridate package
+
+```{r}
+#| eval: false
+# List Parquet files in the directory
+parquet_files <- dir_ls("../data/", regexp = "\\.parquet$")
+
+# Initialize an empty list to store dataframes
+dfs <- list()
+
+# Loop through each Parquet file, read it, and store in the list
+for (file_path in parquet_files) {
+  df <- read_parquet(file_path)
+  dfs <- append(dfs, list(df))
+}
+
+# Combine individual dataframes into one dataframe
+grab <- bind_rows(dfs) %>%
+  # Convert pingtimestamp column to date-time format
+  mutate(pingtimestamp = as_datetime(pingtimestamp))
+
+# Remove objects that will no longer be used
+rm(df, dfs, file_path, parquet_files)
+```
+
+For sorting a large tibble data frame efficiently in R, while dplyr package offers the `arrange()` function, it typically does not perform the task as quickly as `setorder()` function of data.table package. data.table package often offers better performance for sorting large datasets due to its efficient memory management and optimized algorithms.
+
+```{r}
+#| eval: false
+# Set tibble dataframe as data.table 
+# Then sort by trajectory ID and pingtimestamp
+grab_sorted <- setorder(as.data.table(grab), trj_id, pingtimestamp)
+
+# Convert back to tibble dataframe
+grab_sorted <- as_tibble(grab_sorted)
+
+# Remove objects that will no longer be used
+rm(grab)
+```
+
+```{r}
+#| echo: false
+#| eval: false
+# Save the output as rds file instead of rendering the above code chunks
+write_rds(grab_sorted, "../data/rds/grab_sorted.rds")
+```
+
+```{r}
+#| echo: false
+# Load rds file instead of rendering the above code chunks
+grab_sorted <- read_rds("../data/rds/grab_sorted.rds")
+```
+
+# Data Wrangling
+
+There is a need to identify the Pick-up locations. In the code chunk below, `group_by()` function of dplyr package is used to group the data by trajectory ID, before taking the GPS coordinates (latitude and longitude) of the earliest GPS ping timestamp using `filter()` and `min()` function.
+
+Similar steps are then performed to identify the Drop-off locations. `group_by()` function of dplyr package is used to group the data by trajectory ID, before taking the GPS coordinates (latitude and longitude) of the latest GPS ping timestamp using `filter()` and `max()` function.
+
+```{r}
+#| eval: false
+# Identify Pick-up locations
+pickup_loc <- grab_sorted %>%
+  group_by(trj_id) %>%
+  filter(pingtimestamp == min(pingtimestamp)) %>%
+  ungroup() %>%
+  select(trj_id, rawlng, rawlat) %>%
+  rename(pickup_lng = rawlng, pickup_lat = rawlat)
+
+# Identify Drop-off locations
+dropoff_loc <- grab_sorted %>%
+  group_by(trj_id) %>%
+  filter(pingtimestamp == max(pingtimestamp)) %>%
+  ungroup() %>%
+  select(trj_id, rawlng, rawlat) %>%
+  rename(dropoff_lng = rawlng, dropoff_lat = rawlat)
+```
+
+```{r}
+#| echo: false
+#| eval: false
+# Save the outputs as rds files
+write_rds(pickup_loc, "../data/rds/pickup_loc.rds")
+write_rds(dropoff_loc, "../data/rds/dropoff_loc.rds")
+```
+
+```{r}
+#| echo: false
+# Load rds files instead of rendering the above code chunks
+pickup_loc <- read_rds("../data/rds/pickup_loc.rds")
+dropoff_loc <- read_rds("../data/rds/dropoff_loc.rds")
+```
+
+# Converting aspatial data to geospatial data
+
+To convert the aspatial data to geospatial data, the latitude (`rawlat`) and longitude (`rawlng`) columns will be used. These columns are in decimal degree format, indicating that the data is in wgs84 geographic coordinate system. The code chunk below converts the `grab_sorted` object into a sf data frame using `st_as_sf()` function of sf package then `st_transform()` function to convert it into the svy21 projected coordinate system that Singapore uses.
+
+```{r}
+pickup_sf <- st_as_sf(pickup_loc,
+                      coords = c("pickup_lng", "pickup_lat"),
+                      crs = 4326) %>%
+  st_transform(crs = 3414)
+
+dropoff_sf <- st_as_sf(dropoff_loc,
+                       coords = c("dropoff_lng", "dropoff_lat"),
+                       crs = 4326) %>%
+  st_transform(crs = 3414)
+```
+
+To ensure the transformation has been done correctly, the newly created sf data frames will be visualised on a choropleth map using tmap package.
+
+```{r}
+# Visualise drop-off locations
+tm_shape(mpsz) + 
+  tm_polygons() +
+tm_shape(pickup_sf) + 
+  tm_dots()
+```
+
+```{r}
+# Visualise drop-off locations
+tm_shape(mpsz) + 
+  tm_polygons() +
+tm_shape(dropoff_sf) + 
+  tm_dots()
+```
+
+```{r}
+#| echo: false
+#| eval: false
+# Save the outputs as rds files
+write_rds(pickup_sf, "../data/rds/pickup_sf.rds")
+write_rds(dropoff_sf, "../data/rds/dropoff_sf.rds")
+```
+
+# Creating O-D flow matrix
+
+Apart from pick-up and drop-off point patterns, another objective of this study is to study the origin-destination flow patterns. As such, there is a need to create an origin-destination flow matrix where each row relates to one trajectory ID (trip) and represents travel from origin to destination.
+
+`od_coords2line()` function of stplanr package is used to convert origin-destination coordinates into desire lines. The function takes in a data frame or matrix representing the coordinates of origin-destination data, where the first two columns represent the coordinates of the origin points and the third and fourth columns represent the coordinates of the destination (in the same CRS).
+
+```{r}
+#| eval: false
+odflow <- pickup_loc %>%
+  left_join(dropoff_loc, by = "trj_id")
+
+odflow_sf <- od_coords2line(odflow %>%
+                              select(-"trj_id"),
+                            crs = 4326) %>%
+  st_transform(crs = 3414)
+```
+
+```{r}
+#| echo: false
+#| eval: false
+# Save the output as rds file
+write_rds(odflow, "../data/rds/odflow.rds")
+write_rds(odflow_sf, "../data/rds/odflow_sf.rds")
+```

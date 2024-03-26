@@ -2,46 +2,50 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://capstonejourney.netlify.app/index.html</loc>
-    <lastmod>2024-03-09T05:53:28.582Z</lastmod>
+    <lastmod>2024-03-26T14:37:12.094Z</lastmod>
   </url>
   <url>
     <loc>https://capstonejourney.netlify.app/Analysis/TNKDE/index.html</loc>
-    <lastmod>2024-03-09T05:53:27.414Z</lastmod>
-  </url>
-  <url>
-    <loc>https://capstonejourney.netlify.app/Analysis/Setup/index.html</loc>
-    <lastmod>2024-03-09T05:53:26.399Z</lastmod>
-  </url>
-  <url>
-    <loc>https://capstonejourney.netlify.app/Analysis/NKDE/Week1.html</loc>
-    <lastmod>2024-03-09T05:53:25.441Z</lastmod>
-  </url>
-  <url>
-    <loc>https://capstonejourney.netlify.app/Analysis/KDE/Week1.html</loc>
-    <lastmod>2024-03-09T05:53:24.402Z</lastmod>
-  </url>
-  <url>
-    <loc>https://capstonejourney.netlify.app/about.html</loc>
-    <lastmod>2024-03-09T05:53:23.377Z</lastmod>
-  </url>
-  <url>
-    <loc>https://capstonejourney.netlify.app/Analysis/KDE/index.html</loc>
-    <lastmod>2024-03-09T05:53:23.961Z</lastmod>
-  </url>
-  <url>
-    <loc>https://capstonejourney.netlify.app/Analysis/NKDE/index.html</loc>
-    <lastmod>2024-03-09T05:53:24.979Z</lastmod>
-  </url>
-  <url>
-    <loc>https://capstonejourney.netlify.app/Analysis/Setup/DataPrep.html</loc>
-    <lastmod>2024-03-09T05:53:25.874Z</lastmod>
+    <lastmod>2024-03-09T09:31:51.971Z</lastmod>
   </url>
   <url>
     <loc>https://capstonejourney.netlify.app/Analysis/Setup/LitReview.html</loc>
-    <lastmod>2024-03-09T05:53:26.853Z</lastmod>
+    <lastmod>2024-03-09T09:31:50.683Z</lastmod>
+  </url>
+  <url>
+    <loc>https://capstonejourney.netlify.app/Analysis/Setup/DataPrep.html</loc>
+    <lastmod>2024-03-09T09:32:00.080Z</lastmod>
+  </url>
+  <url>
+    <loc>https://capstonejourney.netlify.app/Analysis/NKDE/index.html</loc>
+    <lastmod>2024-03-09T09:31:48.366Z</lastmod>
+  </url>
+  <url>
+    <loc>https://capstonejourney.netlify.app/Analysis/KDE/index.html</loc>
+    <lastmod>2024-03-26T14:37:11.272Z</lastmod>
+  </url>
+  <url>
+    <loc>https://capstonejourney.netlify.app/about.html</loc>
+    <lastmod>2024-03-09T09:31:46.783Z</lastmod>
+  </url>
+  <url>
+    <loc>https://capstonejourney.netlify.app/Analysis/KDE/Week1.html</loc>
+    <lastmod>2024-03-26T14:37:14.265Z</lastmod>
+  </url>
+  <url>
+    <loc>https://capstonejourney.netlify.app/Analysis/NKDE/Week1.html</loc>
+    <lastmod>2024-03-09T09:31:48.776Z</lastmod>
+  </url>
+  <url>
+    <loc>https://capstonejourney.netlify.app/Analysis/Setup/index.html</loc>
+    <lastmod>2024-03-09T09:31:50.216Z</lastmod>
+  </url>
+  <url>
+    <loc>https://capstonejourney.netlify.app/Analysis/Setup/MapMatching.html</loc>
+    <lastmod>2024-03-09T09:32:04.900Z</lastmod>
   </url>
   <url>
     <loc>https://capstonejourney.netlify.app/Analysis/TNKDE/Week1.html</loc>
-    <lastmod>2024-03-09T05:53:27.809Z</lastmod>
+    <lastmod>2024-03-09T09:31:52.402Z</lastmod>
   </url>
 </urlset>
