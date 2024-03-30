@@ -176,6 +176,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul>
   <li><a href="#getting-started" id="toc-getting-started" class="nav-link active" data-scroll-target="#getting-started">Getting Started</a></li>
   <li><a href="#preparing-base-map" id="toc-preparing-base-map" class="nav-link" data-scroll-target="#preparing-base-map">Preparing base map</a></li>
+  <li><a href="#loading-grab-dataset" id="toc-loading-grab-dataset" class="nav-link" data-scroll-target="#loading-grab-dataset">Loading Grab dataset</a></li>
   <li><a href="#data-wrangling" id="toc-data-wrangling" class="nav-link" data-scroll-target="#data-wrangling">Data Wrangling</a></li>
   <li><a href="#converting-aspatial-data-to-geospatial-data" id="toc-converting-aspatial-data-to-geospatial-data" class="nav-link" data-scroll-target="#converting-aspatial-data-to-geospatial-data">Converting aspatial data to geospatial data</a></li>
   <li><a href="#creating-o-d-flow-matrix" id="toc-creating-o-d-flow-matrix" class="nav-link" data-scroll-target="#creating-o-d-flow-matrix">Creating O-D flow matrix</a></li>
@@ -291,7 +292,9 @@ Geodetic CRS:  WGS 84</code></pre>
 <p><img src="DataPrep_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
-<p>#Loading Grab dataset</p>
+</section>
+<section id="loading-grab-dataset" class="level1">
+<h1>Loading Grab dataset</h1>
 <p>The dataset is provided by Grab over 10 separate files (in Apache Parquet file format), with each trajectory ID (primary identifier of each trip) found in multiple files. There is a need to join the 10 files before performing any further data wrangling. In the code chunk below, <code>read_parquet()</code> from arrow package is used to read the Parquet files. As there are 10 such files, a loop function is used to load each Parquet file within the file directory and stored into a list, which is finally then merged using <code>bind_rows()</code> function from dplyr package. Lastly, as the <code>pingtimestamp</code> field is in integer format, it is converted into date-time format using <code>as_datetime()</code> function of lubridate package</p>
 <div class="cell">
 <details>

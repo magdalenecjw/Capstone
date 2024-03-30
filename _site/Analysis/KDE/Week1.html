@@ -174,6 +174,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul>
   <li><a href="#getting-started" id="toc-getting-started" class="nav-link active" data-scroll-target="#getting-started">Getting Started</a></li>
   <li><a href="#convert-pickup-and-dropoff-location-sf-dataframes-into-spatstats-ppp-object-format" id="toc-convert-pickup-and-dropoff-location-sf-dataframes-into-spatstats-ppp-object-format" class="nav-link" data-scroll-target="#convert-pickup-and-dropoff-location-sf-dataframes-into-spatstats-ppp-object-format">Convert Pickup and Dropoff location sf dataframes into spatstat’s ppp object format</a></li>
+  <li><a href="#create-observational-window-owin" id="toc-create-observational-window-owin" class="nav-link" data-scroll-target="#create-observational-window-owin">Create observational window (owin)</a></li>
+  <li><a href="#combine-point-events-object-and-owin-object" id="toc-combine-point-events-object-and-owin-object" class="nav-link" data-scroll-target="#combine-point-events-object-and-owin-object">Combine point events object and owin object</a></li>
+  <li><a href="#kde-analysis-using-automatic-bandwidth-selection-method-and-gaussian-smoothing-kernel" id="toc-kde-analysis-using-automatic-bandwidth-selection-method-and-gaussian-smoothing-kernel" class="nav-link" data-scroll-target="#kde-analysis-using-automatic-bandwidth-selection-method-and-gaussian-smoothing-kernel">KDE Analysis using automatic bandwidth selection method and Gaussian smoothing kernel</a></li>
+  <li><a href="#working-with-different-automatic-bandwidth-methods" id="toc-working-with-different-automatic-bandwidth-methods" class="nav-link" data-scroll-target="#working-with-different-automatic-bandwidth-methods">Working with different automatic bandwidth methods</a></li>
+  <li><a href="#working-with-different-kernel-methods" id="toc-working-with-different-kernel-methods" class="nav-link" data-scroll-target="#working-with-different-kernel-methods">Working with different kernel methods</a></li>
+  <li><a href="#kde-analysis-using-adaptive-bandwidth" id="toc-kde-analysis-using-adaptive-bandwidth" class="nav-link" data-scroll-target="#kde-analysis-using-adaptive-bandwidth">KDE Analysis using adaptive bandwidth</a></li>
   </ul>
 </nav>
     </div>
@@ -182,7 +188,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">KDE Analysis (1)</h1>
+<h1 class="title">KDE Analysis using spatstat package</h1>
 </div>
 
 
@@ -206,9 +212,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>sf package is used for importing, managing, and processing geospatial data.</li>
 <li>tidyverse package for aspatial data wrangling.</li>
 <li>spatstat package to perform 1st-order spatial point patterns analysis and derive kernel density estimation (KDE) layer.</li>
+<li>tmap package is used to visualize geospatial data on maps.</li>
 </ul>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(sf, sp, tidyverse, spatstat, tmap)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(sf, tidyverse, spatstat, tmap)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>In the code chunk below, the <a href="DataPrep.qmd">cleaned data files</a> are loaded into R.</p>
 <div class="cell">
@@ -251,6 +258,10 @@ Geodetic CRS:  WGS 84</code></pre>
 <p><img src="Week1_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
+</section>
+<section id="create-observational-window-owin" class="level1">
+<h1>Create observational window (owin)</h1>
+<p>When analysing spatial point patterns, it is a good practice to confine the analysis with a geographical area like Singapore boundary. In spatstat, an object called owin is specially designed to represent this polygonal region. The code chunk below is used to create a border of Singapore’s land area and convert it into an owin object of spatstat package using <code>as.owin()</code>.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create border of Singapore's land area</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>mpsz_border <span class="ot">&lt;-</span> <span class="fu">st_cast</span>(mpsz <span class="sc">%&gt;%</span></span>
@@ -264,28 +275,126 @@ Geodetic CRS:  WGS 84</code></pre>
 <p><img src="Week1_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
+</section>
+<section id="combine-point-events-object-and-owin-object" class="level1">
+<h1>Combine point events object and owin object</h1>
+<p>In the code chunks below, pick-up and drop-off events located within the observational window are extracted.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>pickup_owin <span class="ot">=</span> pickup_ppp[mpsz_owin]</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>pickup_owin <span class="ot">&lt;-</span> <span class="fu">rescale</span>(pickup_owin, <span class="dv">1000</span>, <span class="st">"km"</span>)</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>pickup_kde <span class="ot">&lt;-</span> <span class="fu">density</span>(pickup_owin, <span class="at">sigma=</span>bw.diggle, <span class="at">edge=</span><span class="cn">TRUE</span>, <span class="at">kernel=</span><span class="st">"gaussian"</span>) </span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(pickup_kde)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(pickup_owin)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="Week1_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>dropoff_owin <span class="ot">=</span> dropoff_ppp[mpsz_owin]</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>dropoff_owin <span class="ot">&lt;-</span> <span class="fu">rescale</span>(dropoff_owin, <span class="dv">1000</span>, <span class="st">"km"</span>)</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>dropoff_kde <span class="ot">&lt;-</span> <span class="fu">density</span>(dropoff_owin, <span class="at">sigma=</span>bw.diggle, <span class="at">edge=</span><span class="cn">TRUE</span>, <span class="at">kernel=</span><span class="st">"gaussian"</span>) </span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(dropoff_kde)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(dropoff_owin)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="Week1_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
+</section>
+<section id="kde-analysis-using-automatic-bandwidth-selection-method-and-gaussian-smoothing-kernel" class="level1">
+<h1>KDE Analysis using automatic bandwidth selection method and Gaussian smoothing kernel</h1>
+<p>The code chunk below computes a kernel density by using the following configurations of <code>density()</code> function of spatstat:</p>
+<ul>
+<li><code>bw.diggle()</code> automatic bandwidth selection method. Other recommended methods are <code>bw.CvL()</code>, <code>bw.scott()</code> or <code>bw.ppl()</code>.</li>
+<li>Gaussian smoothing kernel, which is the default. Other smoothing methods are: <code>epanechnikov</code>, <code>quartic</code> or <code>disc</code>.</li>
+<li>The intensity estimate is corrected for edge effect bias i.e.&nbsp;<code>edge=TRUE</code> (default is <code>FALSE</code>).</li>
+</ul>
+<p><code>rescale()</code> function is used to covert the unit of measurement from meter to kilometer.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>pickup_owin <span class="ot">&lt;-</span> <span class="fu">rescale</span>(pickup_owin, <span class="dv">1000</span>, <span class="st">"km"</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>pickup_kde <span class="ot">&lt;-</span> <span class="fu">density</span>(pickup_owin, <span class="at">sigma=</span>bw.diggle, <span class="at">edge=</span><span class="cn">TRUE</span>, <span class="at">kernel=</span><span class="st">"gaussian"</span>) </span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>dropoff_owin <span class="ot">&lt;-</span> <span class="fu">rescale</span>(dropoff_owin, <span class="dv">1000</span>, <span class="st">"km"</span>)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>dropoff_kde <span class="ot">&lt;-</span> <span class="fu">density</span>(dropoff_owin, <span class="at">sigma=</span>bw.diggle, <span class="at">edge=</span><span class="cn">TRUE</span>, <span class="at">kernel=</span><span class="st">"gaussian"</span>)</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="fu">png</span>(<span class="st">"pickup_kde.png"</span>, <span class="at">width=</span><span class="dv">600</span>, <span class="at">height=</span><span class="dv">500</span>)</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(pickup_kde)</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="fu">png</span>(<span class="st">"dropoff_kde.png"</span>, <span class="at">width=</span><span class="dv">600</span>, <span class="at">height=</span><span class="dv">500</span>)</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(dropoff_kde)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><img src="pickup_kde.png" class="img-fluid"></p>
+<p><img src="dropoff_kde.png" class="img-fluid"></p>
+</section>
+<section id="working-with-different-automatic-bandwidth-methods" class="level1">
+<h1>Working with different automatic bandwidth methods</h1>
+<p>Baddeley et. (2016) suggested the use of the <code>bw.ppl()</code> algorithm because in their experience it tends to produce the more appropriate values when the pattern consists predominantly of tight clusters. But they also insist that if the purpose of once study is to detect a single tight cluster in the midst of random noise then the <code>bw.diggle()</code> method seems to work best.</p>
+<ul>
+<li>In pick-up locations, both methods do not seem to produce much visible difference.</li>
+<li>In drop-off locations, slightly more intense clusters seem to be detected using <code>bw.diggle()</code>.</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>pickup_ppl <span class="ot">&lt;-</span> <span class="fu">density</span>(pickup_owin, <span class="at">sigma=</span>bw.ppl, <span class="at">edge=</span><span class="cn">TRUE</span>, <span class="at">kernel=</span><span class="st">"gaussian"</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>dropoff_ppl <span class="ot">&lt;-</span> <span class="fu">density</span>(dropoff_owin, <span class="at">sigma=</span>bw.ppl, <span class="at">edge=</span><span class="cn">TRUE</span>, <span class="at">kernel=</span><span class="st">"gaussian"</span>)</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow=</span><span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">2</span>))</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="fu">png</span>(<span class="st">"pickup_auto.png"</span>, <span class="at">width=</span><span class="dv">1200</span>, <span class="at">height=</span><span class="dv">500</span>)</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow=</span><span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(pickup_kde, <span class="at">main=</span><span class="st">"Pick-up - bw.diggle"</span>)</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(pickup_ppl, <span class="at">main=</span><span class="st">"Pick-up - bw.ppl"</span>)</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="fu">png</span>(<span class="st">"dropoff_auto.png"</span>, <span class="at">width=</span><span class="dv">1200</span>, <span class="at">height=</span><span class="dv">500</span>)</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow=</span><span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(dropoff_kde, <span class="at">main=</span><span class="st">"Drop-off - bw.diggle"</span>)</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(dropoff_ppl, <span class="at">main=</span><span class="st">"Drop-off - bw.ppl"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><img src="pickup_auto.png" class="img-fluid"></p>
+<p><img src="dropoff_auto.png" class="img-fluid"></p>
+</section>
+<section id="working-with-different-kernel-methods" class="level1">
+<h1>Working with different kernel methods</h1>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>pickup_ep <span class="ot">&lt;-</span> <span class="fu">density</span>(pickup_owin, <span class="at">sigma=</span>bw.ppl, <span class="at">edge=</span><span class="cn">TRUE</span>, <span class="at">kernel=</span><span class="st">"epanechnikov"</span>)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>pickup_q <span class="ot">&lt;-</span> <span class="fu">density</span>(pickup_owin, <span class="at">sigma=</span>bw.ppl, <span class="at">edge=</span><span class="cn">TRUE</span>, <span class="at">kernel=</span><span class="st">"quartic"</span>)</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>pickup_d <span class="ot">&lt;-</span> <span class="fu">density</span>(pickup_owin, <span class="at">sigma=</span>bw.ppl, <span class="at">edge=</span><span class="cn">TRUE</span>, <span class="at">kernel=</span><span class="st">"disc"</span>)</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="fu">png</span>(<span class="st">"pickup_kernels.png"</span>, <span class="at">width=</span><span class="dv">1200</span>, <span class="at">height=</span><span class="dv">700</span>)</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow=</span><span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">2</span>))</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(pickup_ppl, <span class="at">main=</span><span class="st">"Pick-up - Gaussian"</span>)</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(pickup_ep, <span class="at">main=</span><span class="st">"Pick-up - Epanechnikov"</span>)</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(pickup_q, <span class="at">main=</span><span class="st">"Pick-up - Quartic"</span>)</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(pickup_d, <span class="at">main=</span><span class="st">"Pick-up - Disc"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><img src="pickup_kernels.png" class="img-fluid"></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>dropoff_ep <span class="ot">&lt;-</span> <span class="fu">density</span>(dropoff_owin, <span class="at">sigma=</span>bw.ppl, <span class="at">edge=</span><span class="cn">TRUE</span>, <span class="at">kernel=</span><span class="st">"epanechnikov"</span>)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>dropoff_q <span class="ot">&lt;-</span> <span class="fu">density</span>(dropoff_owin, <span class="at">sigma=</span>bw.ppl, <span class="at">edge=</span><span class="cn">TRUE</span>, <span class="at">kernel=</span><span class="st">"quartic"</span>)</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>dropoff_d <span class="ot">&lt;-</span> <span class="fu">density</span>(dropoff_owin, <span class="at">sigma=</span>bw.ppl, <span class="at">edge=</span><span class="cn">TRUE</span>, <span class="at">kernel=</span><span class="st">"disc"</span>)</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="fu">png</span>(<span class="st">"dropoff_kernels.png"</span>, <span class="at">width=</span><span class="dv">1200</span>, <span class="at">height=</span><span class="dv">700</span>)</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow=</span><span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">2</span>))</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(dropoff_ppl, <span class="at">main=</span><span class="st">"Drop-off - Gaussian"</span>)</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(dropoff_ep, <span class="at">main=</span><span class="st">"Drop-off - Epanechnikov"</span>)</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(dropoff_q, <span class="at">main=</span><span class="st">"Drop-off - Quartic"</span>)</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(dropoff_d, <span class="at">main=</span><span class="st">"Drop-off - Disc"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><img src="dropoff_kernels.png" class="img-fluid"></p>
+</section>
+<section id="kde-analysis-using-adaptive-bandwidth" class="level1">
+<h1>KDE Analysis using adaptive bandwidth</h1>
+<p>Fixed bandwidth method is very sensitive to highly skew distribution of spatial point patterns over geographical units for example urban versus rural. One way to overcome this problem is by using adaptive bandwidth - in spatstat package, this can be derived using <code>density.adaptive()</code> function.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>pickup_adapt <span class="ot">&lt;-</span> <span class="fu">adaptive.density</span>(pickup_owin, <span class="at">method=</span><span class="st">"kernel"</span>)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>dropoff_adapt <span class="ot">&lt;-</span> <span class="fu">adaptive.density</span>(dropoff_owin, <span class="at">method=</span><span class="st">"kernel"</span>)</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="fu">png</span>(<span class="st">"pickup_adapt.png"</span>, <span class="at">width=</span><span class="dv">1200</span>, <span class="at">height=</span><span class="dv">700</span>)</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow=</span><span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(pickup_ppl, <span class="at">main=</span><span class="st">"Pick-up - Automatic Bandwidth Selection"</span>)</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(pickup_adapt, <span class="at">main=</span><span class="st">"Pick-up - Adaptive Bandwidth Selection"</span>)</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="fu">png</span>(<span class="st">"dropoff_adapt.png"</span>, <span class="at">width=</span><span class="dv">1200</span>, <span class="at">height=</span><span class="dv">700</span>)</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow=</span><span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(dropoff_ppl, <span class="at">main=</span><span class="st">"Drop-off - Automatic Bandwidth Selection"</span>)</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(dropoff_adapt, <span class="at">main=</span><span class="st">"Drop-off - Adaptive Bandwidth Selection"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><img src="pickup_adapt.png" class="img-fluid"></p>
+<p><img src="dropoff_adapt.png" class="img-fluid"></p>
 
 
 </section>

@@ -81,7 +81,7 @@ tm_shape(mpsz_road %>%
   tm_lines()
 ```
 
-#Loading Grab dataset
+# Loading Grab dataset
 
 The dataset is provided by Grab over 10 separate files (in Apache Parquet file format), with each trajectory ID (primary identifier of each trip) found in multiple files. There is a need to join the 10 files before performing any further data wrangling. In the code chunk below, `read_parquet()` from arrow package is used to read the Parquet files. As there are 10 such files, a loop function is used to load each Parquet file within the file directory and stored into a list, which is finally then merged using `bind_rows()` function from dplyr package. Lastly, as the `pingtimestamp` field is in integer format, it is converted into date-time format using `as_datetime()` function of lubridate package
 

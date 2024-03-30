@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://capstonejourney.netlify.app/index.html</loc>
-    <lastmod>2024-03-26T14:37:12.094Z</lastmod>
+    <lastmod>2024-03-30T10:03:44.057Z</lastmod>
   </url>
   <url>
     <loc>https://capstonejourney.netlify.app/Analysis/TNKDE/index.html</loc>
@@ -14,7 +14,7 @@
   </url>
   <url>
     <loc>https://capstonejourney.netlify.app/Analysis/Setup/DataPrep.html</loc>
-    <lastmod>2024-03-09T09:32:00.080Z</lastmod>
+    <lastmod>2024-03-27T06:43:04.800Z</lastmod>
   </url>
   <url>
     <loc>https://capstonejourney.netlify.app/Analysis/NKDE/index.html</loc>
@@ -22,7 +22,7 @@
   </url>
   <url>
     <loc>https://capstonejourney.netlify.app/Analysis/KDE/index.html</loc>
-    <lastmod>2024-03-26T14:37:11.272Z</lastmod>
+    <lastmod>2024-03-30T10:03:43.071Z</lastmod>
   </url>
   <url>
     <loc>https://capstonejourney.netlify.app/about.html</loc>
@@ -30,7 +30,7 @@
   </url>
   <url>
     <loc>https://capstonejourney.netlify.app/Analysis/KDE/Week1.html</loc>
-    <lastmod>2024-03-26T14:37:14.265Z</lastmod>
+    <lastmod>2024-03-30T10:03:58.699Z</lastmod>
   </url>
   <url>
     <loc>https://capstonejourney.netlify.app/Analysis/NKDE/Week1.html</loc>
@@ -38,7 +38,7 @@
   </url>
   <url>
     <loc>https://capstonejourney.netlify.app/Analysis/Setup/index.html</loc>
-    <lastmod>2024-03-09T09:31:50.216Z</lastmod>
+    <lastmod>2024-03-27T06:43:05.505Z</lastmod>
   </url>
   <url>
     <loc>https://capstonejourney.netlify.app/Analysis/Setup/MapMatching.html</loc>
@@ -47,5 +47,9 @@
   <url>
     <loc>https://capstonejourney.netlify.app/Analysis/TNKDE/Week1.html</loc>
     <lastmod>2024-03-09T09:31:52.402Z</lastmod>
+  </url>
+  <url>
+    <loc>https://capstonejourney.netlify.app/Analysis/KDE/Week2.html</loc>
+    <lastmod>2024-03-30T10:03:56.781Z</lastmod>
   </url>
 </urlset>
