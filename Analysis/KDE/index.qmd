@@ -5,6 +5,7 @@ search: false
 listing:
   contents: 
   - Week1.qmd
+  - Week2.qmd
   - "!index.qmd"
   type: grid
   categories: true

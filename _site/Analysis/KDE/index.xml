@@ -13,9 +13,410 @@
 <url>https://capstonejourney.netlify.app/Images/logo.png</url>
 <title>Capstone Journey</title>
 <link>https://capstonejourney.netlify.app/Analysis/KDE/index.html</link>
+<height>144</height>
+<width>144</width>
 </image>
 <generator>quarto-1.3.450</generator>
-<lastBuildDate>Sat, 30 Mar 2024 10:03:42 GMT</lastBuildDate>
+<lastBuildDate>Tue, 02 Apr 2024 06:07:25 GMT</lastBuildDate>
+<item>
+  <title>KDE Analysis using SpatialKDE package</title>
+  <link>https://capstonejourney.netlify.app/Analysis/KDE/Week2.html</link>
+  <description><![CDATA[ 
+
+
+
+<p><img src="https://capstonejourney.netlify.app/Images/3.png" class="img-fluid" width="500"></p>
+<section id="getting-started" class="level1">
+<h1>Getting Started</h1>
+<p>The code chunk below uses <code>p_load()</code> function of pacman package to check if the required packages have been installed on the computer. If they are, the packages will be launched.</p>
+<p>The packages used are:</p>
+<ul>
+<li>sf package is used for importing, managing, and processing geospatial data.</li>
+<li>tidyverse package for aspatial data wrangling.</li>
+<li>SpatialKDE package to perform 1st-order spatial point patterns analysis and derive kernel density estimation (KDE) layer.</li>
+<li>tmap package is used to visualize geospatial data on maps.</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1">pacman<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">::</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">p_load</span>(sf, tidyverse, SpatialKDE, tmap)</span></code></pre></div>
+</div>
+<p>In the code chunk below, the <a href="DataPrep.qmd">cleaned data files</a> are loaded into R.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Load base map</span></span>
+<span id="cb2-2">mpsz <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">=</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">st_read</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">dsn =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"../data/geospatial"</span>, </span>
+<span id="cb2-3">               <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">layer =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"MPSZ-2019"</span>) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb2-4">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">st_transform</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">crs =</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3414</span>) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb2-5">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">select</span>(PLN_AREA_N, geometry) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb2-6">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">group_by</span>(PLN_AREA_N) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb2-7">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">summarise</span>() <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb2-8">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">ungroup</span>()</span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Reading layer `MPSZ-2019' from data source 
+  `C:\magdalenecjw\Capstone\Analysis\data\geospatial' using driver `ESRI Shapefile'
+Simple feature collection with 332 features and 6 fields
+Geometry type: MULTIPOLYGON
+Dimension:     XY
+Bounding box:  xmin: 103.6057 ymin: 1.158699 xmax: 104.0885 ymax: 1.470775
+Geodetic CRS:  WGS 84</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Load rds file</span></span>
+<span id="cb4-2">pickup_sf <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">st_as_sf</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">read_rds</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"../data/rds/pickup_sf.rds"</span>))</span>
+<span id="cb4-3">dropoff_sf <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">st_as_sf</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">read_rds</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"../data/rds/dropoff_sf.rds"</span>))</span></code></pre></div>
+</div>
+</section>
+<section id="kde-for-pick-up-locations" class="level1">
+<h1>KDE for Pick-up Locations</h1>
+<p>Selecting the optimal bandwidth when performing spatial Kernel Density Estimation (KDE) is crucial because it significantly influences the accuracy of the density estimates. The bandwidth determines the scale of smoothing: if the bandwidth is too large, the data may be oversmoothed which would obscure important spatial features. Conversely, if the bandwidth is too small, it may result in a noisy estimate that overemphasizes random fluctuations. When selecting bandwidth in the context of spatial KDE, it may be useful to begin the analysis with a rule-of-thumb estimate to get a general sense of the spatial distribution. One method could be the Silverman’s Rule of Thumb: Adapted for spatial data, this method calculates bandwidth based on the standard deviation of the spatial coordinates and the number of points.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Extract coordinates</span></span>
+<span id="cb5-2">coords <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">st_coordinates</span>(pickup_sf)</span>
+<span id="cb5-3"></span>
+<span id="cb5-4"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Calculate standard deviation (sigma) for longitude and latitude</span></span>
+<span id="cb5-5">sigma_lon <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">sd</span>(coords[,<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>])  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Longitude is the first column</span></span>
+<span id="cb5-6">sigma_lat <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">sd</span>(coords[,<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>])  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Latitude is the second column</span></span>
+<span id="cb5-7"></span>
+<span id="cb5-8"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Calculate Silverman's bandwidth for each dimension</span></span>
+<span id="cb5-9">n <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">=</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">nrow</span>(pickup_sf)</span>
+<span id="cb5-10">bw_lon <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">=</span> <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1.06</span> <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> sigma_lon <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> (n <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">^</span> (<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">5</span>))</span>
+<span id="cb5-11">bw_lat <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">=</span> <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1.06</span> <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> sigma_lat <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> (n <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">^</span> (<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">5</span>))</span>
+<span id="cb5-12"></span>
+<span id="cb5-13"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Use the average or maximum of the two bandwidths</span></span>
+<span id="cb5-14">bw <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">=</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">mean</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">c</span>(bw_lon, bw_lat))</span></code></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1">pickup_kde <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> pickup_sf <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb6-2">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">kde</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">band_width =</span> bw, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">kernel =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"quartic"</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">grid =</span> mpsz)</span></code></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Using centroids instead of provided `grid` geometries to calculate KDE estimates.</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Done: [=-------------------------------------------------------------------] .
+Done: [====================================================================] .
+                                                                              </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb9" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">tm_shape</span>(pickup_kde) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span></span>
+<span id="cb9-2">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">tm_polygons</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">col =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"kde_value"</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">palette =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"viridis"</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">title =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"KDE for Pick-up Points"</span>)</span></code></pre></div>
+<div class="cell-output-display">
+<p><img src="https://capstonejourney.netlify.app/Analysis/KDE/Week2_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</section>
+<section id="kde-for-drop-off-locations" class="level1">
+<h1>KDE for Drop-off Locations</h1>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Extract coordinates</span></span>
+<span id="cb10-2">coords2 <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">st_coordinates</span>(dropoff_sf)</span>
+<span id="cb10-3"></span>
+<span id="cb10-4"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Calculate standard deviation (sigma) for longitude and latitude</span></span>
+<span id="cb10-5">sigma_lon2 <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">sd</span>(coords2[,<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>])  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Longitude is the first column</span></span>
+<span id="cb10-6">sigma_lat2 <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">sd</span>(coords2[,<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>])  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Latitude is the second column</span></span>
+<span id="cb10-7"></span>
+<span id="cb10-8"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Calculate Silverman's bandwidth for each dimension</span></span>
+<span id="cb10-9">n2 <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">=</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">nrow</span>(dropoff_sf)</span>
+<span id="cb10-10">bw_lon2 <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">=</span> <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1.06</span> <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> sigma_lon2 <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> (n2 <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">^</span> (<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">5</span>))</span>
+<span id="cb10-11">bw_lat2 <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">=</span> <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1.06</span> <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> sigma_lat2 <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> (n2 <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">^</span> (<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">5</span>))</span>
+<span id="cb10-12"></span>
+<span id="cb10-13"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Use the average or maximum of the two bandwidths</span></span>
+<span id="cb10-14">bw2 <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">=</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">mean</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">c</span>(bw_lon2, bw_lat2))</span></code></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1">dropoff_kde <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> dropoff_sf <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb11-2">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">kde</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">band_width =</span> bw2, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">kernel =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"quartic"</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">grid =</span> mpsz)</span></code></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Using centroids instead of provided `grid` geometries to calculate KDE estimates.</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Done: [=-------------------------------------------------------------------] .
+Done: [====================================================================] .
+                                                                              </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb14" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">tm_shape</span>(dropoff_kde) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span></span>
+<span id="cb14-2">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">tm_polygons</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">col =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"kde_value"</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">palette =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"viridis"</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">title =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"KDE for Drop-off Points"</span>)</span></code></pre></div>
+<div class="cell-output-display">
+<p><img src="https://capstonejourney.netlify.app/Analysis/KDE/Week2_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+
+
+</section>
+
+ ]]></description>
+  <guid>https://capstonejourney.netlify.app/Analysis/KDE/Week2.html</guid>
+  <pubDate>Tue, 02 Apr 2024 06:07:25 GMT</pubDate>
+</item>
 <item>
   <title>KDE Analysis using spatstat package</title>
   <link>https://capstonejourney.netlify.app/Analysis/KDE/Week1.html</link>
@@ -311,7 +712,7 @@ font-style: inherit;">plot</span>(dropoff_kde)</span></code></pre></div>
 </section>
 <section id="working-with-different-automatic-bandwidth-methods" class="level1">
 <h1>Working with different automatic bandwidth methods</h1>
-<p>Baddeley et. (2016) suggested the use of the <code>bw.ppl()</code> algorithm because in their experience it tends to produce the more appropriate values when the pattern consists predominantly of tight clusters. But they also insist that if the purpose of once study is to detect a single tight cluster in the midst of random noise then the <code>bw.diggle()</code> method seems to work best.</p>
+<p><code>bw.diggle()</code> refers to a cross-validated bandwidth selection while <code>bw.ppl()</code> refers to a likelihood cross-validated bandwidth selection. Baddeley et. (2016) suggested the use of the <code>bw.ppl()</code> algorithm because in their experience it tends to produce the more appropriate values when the pattern consists predominantly of tight clusters. But they also insist that if the purpose of once study is to detect a single tight cluster in the midst of random noise then the <code>bw.diggle()</code> method seems to work best.</p>
 <ul>
 <li>In pick-up locations, both methods do not seem to produce much visible difference.</li>
 <li>In drop-off locations, slightly more intense clusters seem to be detected using <code>bw.diggle()</code>.</li>
@@ -755,7 +1156,7 @@ font-style: inherit;">"Drop-off - Adaptive Bandwidth Selection"</span>)</span></
 
  ]]></description>
   <guid>https://capstonejourney.netlify.app/Analysis/KDE/Week1.html</guid>
-  <pubDate>Sat, 30 Mar 2024 10:03:42 GMT</pubDate>
+  <pubDate>Tue, 02 Apr 2024 06:07:25 GMT</pubDate>
 </item>
 </channel>
 </rss>

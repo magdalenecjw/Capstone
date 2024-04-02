@@ -113,7 +113,7 @@ plot(dropoff_kde)
 
 # Working with different automatic bandwidth methods
 
-Baddeley et. (2016) suggested the use of the `bw.ppl()` algorithm because in their experience it tends to produce the more appropriate values when the pattern consists predominantly of tight clusters. But they also insist that if the purpose of once study is to detect a single tight cluster in the midst of random noise then the `bw.diggle()` method seems to work best.
+`bw.diggle()` refers to a cross-validated bandwidth selection while `bw.ppl()` refers to a likelihood cross-validated bandwidth selection. Baddeley et. (2016) suggested the use of the `bw.ppl()` algorithm because in their experience it tends to produce the more appropriate values when the pattern consists predominantly of tight clusters. But they also insist that if the purpose of once study is to detect a single tight cluster in the midst of random noise then the `bw.diggle()` method seems to work best.
 
 -   In pick-up locations, both methods do not seem to produce much visible difference.
 -   In drop-off locations, slightly more intense clusters seem to be detected using `bw.diggle()`.

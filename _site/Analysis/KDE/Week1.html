@@ -323,7 +323,7 @@ Geodetic CRS:  WGS 84</code></pre>
 </section>
 <section id="working-with-different-automatic-bandwidth-methods" class="level1">
 <h1>Working with different automatic bandwidth methods</h1>
-<p>Baddeley et. (2016) suggested the use of the <code>bw.ppl()</code> algorithm because in their experience it tends to produce the more appropriate values when the pattern consists predominantly of tight clusters. But they also insist that if the purpose of once study is to detect a single tight cluster in the midst of random noise then the <code>bw.diggle()</code> method seems to work best.</p>
+<p><code>bw.diggle()</code> refers to a cross-validated bandwidth selection while <code>bw.ppl()</code> refers to a likelihood cross-validated bandwidth selection. Baddeley et. (2016) suggested the use of the <code>bw.ppl()</code> algorithm because in their experience it tends to produce the more appropriate values when the pattern consists predominantly of tight clusters. But they also insist that if the purpose of once study is to detect a single tight cluster in the midst of random noise then the <code>bw.diggle()</code> method seems to work best.</p>
 <ul>
 <li>In pick-up locations, both methods do not seem to produce much visible difference.</li>
 <li>In drop-off locations, slightly more intense clusters seem to be detected using <code>bw.diggle()</code>.</li>
