@@ -3,8 +3,7 @@ pagetitle: Setting Up | Capstone
 title: Setting Up
 search: false
 listing:
-  contents: 
-  - LitReview.qmd
+  contents:
   - DataPrep.qmd
   - "!index.qmd"
   type: grid

@@ -82,12 +82,11 @@ dropoff_owin = dropoff_ppp[mpsz_owin]
 plot(dropoff_owin)
 ```
 
-# KDE Analysis using automatic bandwidth selection method and Gaussian smoothing kernel
+# KDE Analysis using Cross-validation method
 
 The code chunk below computes a kernel density by using the following configurations of `density()` function of spatstat:
 
--   `bw.diggle()` automatic bandwidth selection method. Other recommended methods are `bw.CvL()`, `bw.scott()` or `bw.ppl()`.
--   Gaussian smoothing kernel, which is the default. Other smoothing methods are: `epanechnikov`, `quartic` or `disc`.
+-   `bw.ppl()` uses cross-validation to select a smoothing bandwidth for the kernel density estimation.
 -   The intensity estimate is corrected for edge effect bias i.e. `edge=TRUE` (default is `FALSE`).
 
 `rescale()` function is used to covert the unit of measurement from meter to kilometer.
@@ -95,10 +94,10 @@ The code chunk below computes a kernel density by using the following configurat
 ```{r}
 #| eval: false
 pickup_owin <- rescale(pickup_owin, 1000, "km")
-pickup_kde <- density(pickup_owin, sigma=bw.diggle, edge=TRUE, kernel="gaussian") 
+pickup_kde <- density(pickup_owin, sigma=bw.diggle, edge=TRUE) 
 
 dropoff_owin <- rescale(dropoff_owin, 1000, "km")
-dropoff_kde <- density(dropoff_owin, sigma=bw.diggle, edge=TRUE, kernel="gaussian")
+dropoff_kde <- density(dropoff_owin, sigma=bw.diggle, edge=TRUE)
 
 png("pickup_kde.png", width=600, height=500)
 plot(pickup_kde)
@@ -127,52 +126,18 @@ par(mfrow=c(2,2))
 
 png("pickup_auto.png", width=1200, height=500)
 par(mfrow=c(1,2))
-plot(pickup_kde, main="Pick-up - bw.diggle")
-plot(pickup_ppl, main="Pick-up - bw.ppl")
+plot(pickup_kde, main="Least Squares Cross Validation")
+plot(pickup_ppl, main="Likelihood Cross Validation")
 
 png("dropoff_auto.png", width=1200, height=500)
 par(mfrow=c(1,2))
-plot(dropoff_kde, main="Drop-off - bw.diggle")
-plot(dropoff_ppl, main="Drop-off - bw.ppl")
+plot(dropoff_kde, main="Least Squares Cross Validation")
+plot(dropoff_ppl, main="Likelihood Cross Validation")
 ```
 
 ![](pickup_auto.png)
 
 ![](dropoff_auto.png)
-
-# Working with different kernel methods
-
-```{r}
-#| eval: false
-pickup_ep <- density(pickup_owin, sigma=bw.ppl, edge=TRUE, kernel="epanechnikov")
-pickup_q <- density(pickup_owin, sigma=bw.ppl, edge=TRUE, kernel="quartic")
-pickup_d <- density(pickup_owin, sigma=bw.ppl, edge=TRUE, kernel="disc")
-
-png("pickup_kernels.png", width=1200, height=700)
-par(mfrow=c(2,2))
-plot(pickup_ppl, main="Pick-up - Gaussian")
-plot(pickup_ep, main="Pick-up - Epanechnikov")
-plot(pickup_q, main="Pick-up - Quartic")
-plot(pickup_d, main="Pick-up - Disc")
-```
-
-![](pickup_kernels.png)
-
-```{r}
-#| eval: false
-dropoff_ep <- density(dropoff_owin, sigma=bw.ppl, edge=TRUE, kernel="epanechnikov")
-dropoff_q <- density(dropoff_owin, sigma=bw.ppl, edge=TRUE, kernel="quartic")
-dropoff_d <- density(dropoff_owin, sigma=bw.ppl, edge=TRUE, kernel="disc")
-
-png("dropoff_kernels.png", width=1200, height=700)
-par(mfrow=c(2,2))
-plot(dropoff_ppl, main="Drop-off - Gaussian")
-plot(dropoff_ep, main="Drop-off - Epanechnikov")
-plot(dropoff_q, main="Drop-off - Quartic")
-plot(dropoff_d, main="Drop-off - Disc")
-```
-
-![](dropoff_kernels.png)
 
 # KDE Analysis using adaptive bandwidth
 
@@ -183,15 +148,17 @@ Fixed bandwidth method is very sensitive to highly skew distribution of spatial 
 pickup_adapt <- adaptive.density(pickup_owin, method="kernel")
 dropoff_adapt <- adaptive.density(dropoff_owin, method="kernel")
 
-png("pickup_adapt.png", width=1200, height=700)
-par(mfrow=c(1,2))
-plot(pickup_ppl, main="Pick-up - Automatic Bandwidth Selection")
-plot(pickup_adapt, main="Pick-up - Adaptive Bandwidth Selection")
+png("pickup_adapt.png", width=1000, height=700)
+par(mfrow=c(2,2))
+plot(pickup_kde, main="Least Squares Cross Validation")
+plot(pickup_ppl, main="Likelihood Cross Validation")
+plot(pickup_adapt, main="Adaptive Bandwidth Selection")
 
-png("dropoff_adapt.png", width=1200, height=700)
-par(mfrow=c(1,2))
-plot(dropoff_ppl, main="Drop-off - Automatic Bandwidth Selection")
-plot(dropoff_adapt, main="Drop-off - Adaptive Bandwidth Selection")
+png("dropoff_adapt.png", width=1000, height=700)
+par(mfrow=c(2,2))
+plot(dropoff_kde, main="Least Squares Cross Validation")
+plot(dropoff_ppl, main="Likelihood Cross Validation")
+plot(dropoff_adapt, main="Adaptive Bandwidth Selection")
 ```
 
 ![](pickup_adapt.png)

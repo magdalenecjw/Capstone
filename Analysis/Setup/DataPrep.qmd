@@ -149,7 +149,7 @@ pickup_loc <- grab_sorted %>%
   group_by(trj_id) %>%
   filter(pingtimestamp == min(pingtimestamp)) %>%
   ungroup() %>%
-  select(trj_id, rawlng, rawlat) %>%
+  select(trj_id, rawlng, rawlat, pingtimestamp) %>%
   rename(pickup_lng = rawlng, pickup_lat = rawlat)
 
 # Identify Drop-off locations
@@ -157,7 +157,7 @@ dropoff_loc <- grab_sorted %>%
   group_by(trj_id) %>%
   filter(pingtimestamp == max(pingtimestamp)) %>%
   ungroup() %>%
-  select(trj_id, rawlng, rawlat) %>%
+  select(trj_id, rawlng, rawlat, pingtimestamp) %>%
   rename(dropoff_lng = rawlng, dropoff_lat = rawlat)
 ```
 

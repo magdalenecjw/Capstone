@@ -4,8 +4,9 @@ title: KDE Analysis
 search: false
 listing:
   contents: 
-  - Week1.qmd
-  - Week2.qmd
+  - KDE_spatstat.qmd
+  - KDE_SpatialKDE.qmd
+  - TKDE_sparr.qmd
   - "!index.qmd"
   type: grid
   categories: true

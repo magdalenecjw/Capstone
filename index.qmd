@@ -23,8 +23,9 @@ listing:
 
   - id: KDE
     contents: 
-    - /Analysis/KDE/Week1.qmd
-    - /Analysis/KDE/Week2.qmd
+    - /Analysis/KDE/KDE_spatstat.qmd
+    - /Analysis/KDE/KDE_SpatialKDE.qmd
+    - /Analysis/KDE/TKDE_sparr.qmd
     - "!index.qmd"
     type: grid
     categories: false

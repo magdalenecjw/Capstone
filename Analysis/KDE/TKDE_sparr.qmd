@@ -1,0 +1,176 @@
+---
+pagetitle: KDE Analysis | Capstone
+title: Temporal KDE Analysis using sparr package
+---
+
+![](../../Images/3.png){width="500"}
+
+# Getting Started
+
+The code chunk below uses `p_load()` function of pacman package to check if the required packages have been installed on the computer. If they are, the packages will be launched.
+
+The packages used are:
+
+-   sf package is used for importing, managing, and processing geospatial data.
+-   tidyverse package for aspatial data wrangling.
+-   spatstat package to perform 1st-order spatial point patterns analysis and derive kernel density estimation (KDE) layer.
+-   tmap package is used to visualize geospatial data on maps.
+
+```{r}
+pacman::p_load(sf, tidyverse, spatstat, tmap, sparr, lubridate)
+```
+
+In the code chunk below, the [cleaned data files](DataPrep.qmd) are loaded into R.
+
+```{r}
+# Load base map
+mpsz = st_read(dsn = "../data/geospatial", 
+               layer = "MPSZ-2019") %>%
+  st_transform(crs = 3414)
+
+# Load rds file
+pickup_sf <- st_as_sf(read_rds("../data/rds/pickup_sf.rds")) %>%
+  st_intersection(mpsz) %>%
+  filter(PLN_AREA_N == "ANG MO KIO")
+
+pickup_times <- as.list(as.numeric(pickup_sf$pingtimestamp))
+
+dropoff_sf <- st_as_sf(read_rds("../data/rds/dropoff_sf.rds"))%>%
+  mutate(timestamp = as.numeric(pingtimestamp)) %>%
+  select(timestamp, geometry)
+```
+
+# Convert Pickup and Dropoff location sf dataframes into spatstat’s ppp object format
+
+Convert the sf dataframe to a ppp object using `as.ppp()` function from the spatstat package. The result is a marked planar point pattern. To change a marked planar point pattern to just a planar point pattern, simply remove the marks associated with each point using `marks(pickup_ppp) <- NULL`.
+
+```{r}
+pickup_ppp <- as.ppp(pickup_sf)
+
+plot(pickup_ppp)
+```
+
+```{r}
+dropoff_ppp <- as.ppp(dropoff_sf)
+
+plot(dropoff_ppp)
+```
+
+# Create observational window (owin)
+
+When analysing spatial point patterns, it is a good practice to confine the analysis with a geographical area like Singapore boundary. In spatstat, an object called owin is specially designed to represent this polygonal region. The code chunk below is used to create a border of Singapore's land area and convert it into an owin object of spatstat package using `as.owin()`.
+
+```{r}
+# Create border of Singapore's land area
+mpsz_border <- st_cast(mpsz %>%
+                         summarize(), "POLYGON")
+
+# Convert the resulting sf object to an owin object
+mpsz_owin <- as.owin(mpsz_border)
+
+plot(mpsz_owin)
+```
+
+# Combine point events object and owin object
+
+In the code chunks below, pick-up and drop-off events located within the observational window are extracted.
+
+```{r}
+pickup_owin = pickup_ppp[mpsz_owin]
+
+plot(pickup_owin)
+```
+
+```{r}
+dropoff_owin = dropoff_ppp[mpsz_owin]
+
+plot(dropoff_owin)
+```
+
+# KDE Analysis using Cross-validation method
+
+The code chunk below computes a kernel density by using the following configurations of `density()` function of spatstat:
+
+-   `bw.ppl()` uses cross-validation to select a smoothing bandwidth for the kernel density estimation.
+-   The intensity estimate is corrected for edge effect bias i.e. `edge=TRUE` (default is `FALSE`).
+
+`rescale()` function is used to covert the unit of measurement from meter to kilometer.
+
+```{r}
+#| eval: false
+pickup_owin <- rescale(pickup_owin, 1000, "km")
+dropoff_owin <- rescale(dropoff_owin, 1000, "km")
+
+marks(pickup_owin) <- NULL
+
+bw = bw.diggle(pickup_owin)
+
+pickup_tkde <- spattemp.density(pickup_owin, h = bw, tt = as.numeric(pickup_times))
+
+dropoff_kde <- density(dropoff_owin, sigma=bw.diggle, edge=TRUE)
+
+png("pickup_kde.png", width=600, height=500)
+plot(pickup_kde)
+
+png("dropoff_kde.png", width=600, height=500)
+plot(dropoff_kde)
+```
+
+![](pickup_kde.png)
+
+![](dropoff_kde.png)
+
+# Working with different automatic bandwidth methods
+
+`bw.diggle()` refers to a cross-validated bandwidth selection while `bw.ppl()` refers to a likelihood cross-validated bandwidth selection. Baddeley et. (2016) suggested the use of the `bw.ppl()` algorithm because in their experience it tends to produce the more appropriate values when the pattern consists predominantly of tight clusters. But they also insist that if the purpose of once study is to detect a single tight cluster in the midst of random noise then the `bw.diggle()` method seems to work best.
+
+-   In pick-up locations, both methods do not seem to produce much visible difference.
+-   In drop-off locations, slightly more intense clusters seem to be detected using `bw.diggle()`.
+
+```{r}
+#| eval: false
+pickup_ppl <- density(pickup_owin, sigma=bw.ppl, edge=TRUE, kernel="gaussian")
+dropoff_ppl <- density(dropoff_owin, sigma=bw.ppl, edge=TRUE, kernel="gaussian")
+
+par(mfrow=c(2,2))
+
+png("pickup_auto.png", width=1200, height=500)
+par(mfrow=c(1,2))
+plot(pickup_kde, main="Least Squares Cross Validation")
+plot(pickup_ppl, main="Likelihood Cross Validation")
+
+png("dropoff_auto.png", width=1200, height=500)
+par(mfrow=c(1,2))
+plot(dropoff_kde, main="Least Squares Cross Validation")
+plot(dropoff_ppl, main="Likelihood Cross Validation")
+```
+
+![](pickup_auto.png)
+
+![](dropoff_auto.png)
+
+# KDE Analysis using adaptive bandwidth
+
+Fixed bandwidth method is very sensitive to highly skew distribution of spatial point patterns over geographical units for example urban versus rural. One way to overcome this problem is by using adaptive bandwidth - in spatstat package, this can be derived using `density.adaptive()` function.
+
+```{r}
+#| eval: false
+pickup_adapt <- adaptive.density(pickup_owin, method="kernel")
+dropoff_adapt <- adaptive.density(dropoff_owin, method="kernel")
+
+png("pickup_adapt.png", width=1000, height=700)
+par(mfrow=c(2,2))
+plot(pickup_kde, main="Least Squares Cross Validation")
+plot(pickup_ppl, main="Likelihood Cross Validation")
+plot(pickup_adapt, main="Adaptive Bandwidth Selection")
+
+png("dropoff_adapt.png", width=1000, height=700)
+par(mfrow=c(2,2))
+plot(dropoff_kde, main="Least Squares Cross Validation")
+plot(dropoff_ppl, main="Likelihood Cross Validation")
+plot(dropoff_adapt, main="Adaptive Bandwidth Selection")
+```
+
+![](pickup_adapt.png)
+
+![](dropoff_adapt.png)

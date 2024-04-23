@@ -25,8 +25,9 @@
   {
     "listing": "/Analysis/KDE/index.html",
     "items": [
-      "/Analysis/KDE/Week2.html",
-      "/Analysis/KDE/Week1.html"
+      "/Analysis/KDE/KDE_SpatialKDE.html",
+      "/Analysis/KDE/KDE_spatstat.html",
+      "/Analysis/KDE/TKDE_sparr.html"
     ]
   },
   {
