@@ -128,10 +128,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     </a>
     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="nav-menu-setup">    
         <li>
-    <a class="dropdown-item" href="../../Analysis/Setup/LitReview.html" rel="" target="">
- <span class="dropdown-text">Literature Review</span></a>
-  </li>  
-        <li>
     <a class="dropdown-item" href="../../Analysis/Setup/DataPrep.html" rel="" target="">
  <span class="dropdown-text">Data Preparation</span></a>
   </li>  
@@ -173,8 +169,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
    
   <ul>
   <li><a href="#getting-started" id="toc-getting-started" class="nav-link active" data-scroll-target="#getting-started">Getting Started</a></li>
-  <li><a href="#kde-for-pick-up-locations" id="toc-kde-for-pick-up-locations" class="nav-link" data-scroll-target="#kde-for-pick-up-locations">KDE for Pick-up Locations</a></li>
-  <li><a href="#kde-for-drop-off-locations" id="toc-kde-for-drop-off-locations" class="nav-link" data-scroll-target="#kde-for-drop-off-locations">KDE for Drop-off Locations</a></li>
+  <li><a href="#convert-pickup-and-dropoff-location-sf-dataframes-into-spatstats-ppp-object-format" id="toc-convert-pickup-and-dropoff-location-sf-dataframes-into-spatstats-ppp-object-format" class="nav-link" data-scroll-target="#convert-pickup-and-dropoff-location-sf-dataframes-into-spatstats-ppp-object-format">Convert Pickup and Dropoff location sf dataframes into spatstat’s ppp object format</a></li>
+  <li><a href="#create-observational-window-owin" id="toc-create-observational-window-owin" class="nav-link" data-scroll-target="#create-observational-window-owin">Create observational window (owin)</a></li>
+  <li><a href="#combine-point-events-object-and-owin-object" id="toc-combine-point-events-object-and-owin-object" class="nav-link" data-scroll-target="#combine-point-events-object-and-owin-object">Combine point events object and owin object</a></li>
+  <li><a href="#kde-analysis-using-cross-validation-method" id="toc-kde-analysis-using-cross-validation-method" class="nav-link" data-scroll-target="#kde-analysis-using-cross-validation-method">KDE Analysis using Cross-validation method</a></li>
   </ul>
 </nav>
     </div>
@@ -183,7 +181,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">KDE Analysis using SpatialKDE package</h1>
+<h1 class="title">Temporal KDE Analysis using sparr package</h1>
 </div>
 
 
@@ -206,22 +204,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <ul>
 <li>sf package is used for importing, managing, and processing geospatial data.</li>
 <li>tidyverse package for aspatial data wrangling.</li>
-<li>SpatialKDE package to perform 1st-order spatial point patterns analysis and derive kernel density estimation (KDE) layer.</li>
+<li>spatstat package to perform 1st-order spatial point patterns analysis and derive kernel density estimation (KDE) layer.</li>
 <li>tmap package is used to visualize geospatial data on maps.</li>
 </ul>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(sf, tidyverse, SpatialKDE, tmap)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(sf, tidyverse, spatstat, tmap, sparr, lubridate)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>In the code chunk below, the <a href="DataPrep.qmd">cleaned data files</a> are loaded into R.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load base map</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>mpsz <span class="ot">=</span> <span class="fu">st_read</span>(<span class="at">dsn =</span> <span class="st">"../data/geospatial"</span>, </span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>               <span class="at">layer =</span> <span class="st">"MPSZ-2019"</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_transform</span>(<span class="at">crs =</span> <span class="dv">3414</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(PLN_AREA_N, geometry) <span class="sc">%&gt;%</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(PLN_AREA_N) <span class="sc">%&gt;%</span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>() <span class="sc">%&gt;%</span></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_transform</span>(<span class="at">crs =</span> <span class="dv">3414</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Reading layer `MPSZ-2019' from data source 
   `C:\magdalenecjw\Capstone\Analysis\data\geospatial' using driver `ESRI Shapefile'
@@ -232,84 +226,121 @@ Bounding box:  xmin: 103.6057 ymin: 1.158699 xmax: 104.0885 ymax: 1.470775
 Geodetic CRS:  WGS 84</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load rds file</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>pickup_sf <span class="ot">&lt;-</span> <span class="fu">st_as_sf</span>(<span class="fu">read_rds</span>(<span class="st">"../data/rds/pickup_sf.rds"</span>))</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>dropoff_sf <span class="ot">&lt;-</span> <span class="fu">st_as_sf</span>(<span class="fu">read_rds</span>(<span class="st">"../data/rds/dropoff_sf.rds"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>pickup_sf <span class="ot">&lt;-</span> <span class="fu">st_as_sf</span>(<span class="fu">read_rds</span>(<span class="st">"../data/rds/pickup_sf.rds"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_intersection</span>(mpsz) <span class="sc">%&gt;%</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(PLN_AREA_N <span class="sc">==</span> <span class="st">"ANG MO KIO"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: attribute variables are assumed to be spatially constant throughout all
+geometries</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>pickup_times <span class="ot">&lt;-</span> <span class="fu">as.list</span>(<span class="fu">as.numeric</span>(pickup_sf<span class="sc">$</span>pingtimestamp))</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>dropoff_sf <span class="ot">&lt;-</span> <span class="fu">st_as_sf</span>(<span class="fu">read_rds</span>(<span class="st">"../data/rds/dropoff_sf.rds"</span>))<span class="sc">%&gt;%</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">timestamp =</span> <span class="fu">as.numeric</span>(pingtimestamp)) <span class="sc">%&gt;%</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(timestamp, geometry)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="kde-for-pick-up-locations" class="level1">
-<h1>KDE for Pick-up Locations</h1>
-<p>Selecting the optimal bandwidth when performing spatial Kernel Density Estimation (KDE) is crucial because it significantly influences the accuracy of the density estimates. The bandwidth determines the scale of smoothing: if the bandwidth is too large, the data may be oversmoothed which would obscure important spatial features. Conversely, if the bandwidth is too small, it may result in a noisy estimate that overemphasizes random fluctuations. When selecting bandwidth in the context of spatial KDE, it may be useful to begin the analysis with a rule-of-thumb estimate to get a general sense of the spatial distribution. One method could be the Silverman’s Rule of Thumb: Adapted for spatial data, this method calculates bandwidth based on the standard deviation of the spatial coordinates and the number of points.</p>
+<section id="convert-pickup-and-dropoff-location-sf-dataframes-into-spatstats-ppp-object-format" class="level1">
+<h1>Convert Pickup and Dropoff location sf dataframes into spatstat’s ppp object format</h1>
+<p>Convert the sf dataframe to a ppp object using <code>as.ppp()</code> function from the spatstat package. The result is a marked planar point pattern. To change a marked planar point pattern to just a planar point pattern, simply remove the marks associated with each point using <code>marks(pickup_ppp) &lt;- NULL</code>.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract coordinates</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>coords <span class="ot">&lt;-</span> <span class="fu">st_coordinates</span>(pickup_sf)</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate standard deviation (sigma) for longitude and latitude</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>sigma_lon <span class="ot">&lt;-</span> <span class="fu">sd</span>(coords[,<span class="dv">1</span>])  <span class="co"># Longitude is the first column</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>sigma_lat <span class="ot">&lt;-</span> <span class="fu">sd</span>(coords[,<span class="dv">2</span>])  <span class="co"># Latitude is the second column</span></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate Silverman's bandwidth for each dimension</span></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>n <span class="ot">=</span> <span class="fu">nrow</span>(pickup_sf)</span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>bw_lon <span class="ot">=</span> <span class="fl">1.06</span> <span class="sc">*</span> sigma_lon <span class="sc">*</span> (n <span class="sc">^</span> (<span class="sc">-</span><span class="dv">1</span><span class="sc">/</span><span class="dv">5</span>))</span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>bw_lat <span class="ot">=</span> <span class="fl">1.06</span> <span class="sc">*</span> sigma_lat <span class="sc">*</span> (n <span class="sc">^</span> (<span class="sc">-</span><span class="dv">1</span><span class="sc">/</span><span class="dv">5</span>))</span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Use the average or maximum of the two bandwidths</span></span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>bw <span class="ot">=</span> <span class="fu">mean</span>(<span class="fu">c</span>(bw_lon, bw_lat))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>pickup_kde <span class="ot">&lt;-</span> pickup_sf <span class="sc">%&gt;%</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kde</span>(<span class="at">band_width =</span> bw, <span class="at">kernel =</span> <span class="st">"quartic"</span>, <span class="at">grid =</span> mpsz)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>pickup_ppp <span class="ot">&lt;-</span> <span class="fu">as.ppp</span>(pickup_sf)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>Using centroids instead of provided `grid` geometries to calculate KDE estimates.</code></pre>
+<pre><code>Warning in as.ppp.sf(pickup_sf): only first attribute column is used for marks</code></pre>
 </div>
-<div class="cell-output cell-output-stdout">
-<pre><code>
-Done: [=-------------------------------------------------------------------] .
-Done: [====================================================================] .
-                                                                              </code></pre>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(pickup_ppp)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in default.charmap(ntypes, chars): Too many types to display every type
+as a different character</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(pickup_kde) <span class="sc">+</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_polygons</span>(<span class="at">col =</span> <span class="st">"kde_value"</span>, <span class="at">palette =</span> <span class="st">"viridis"</span>, <span class="at">title =</span> <span class="st">"KDE for Pick-up Points"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Only 10 out of 606 symbols are shown in the symbol map</code></pre>
+</div>
 <div class="cell-output-display">
-<p><img src="Week2_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
+<p><img src="TKDE_sparr_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>dropoff_ppp <span class="ot">&lt;-</span> <span class="fu">as.ppp</span>(dropoff_sf)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(dropoff_ppp)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="TKDE_sparr_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 </section>
-<section id="kde-for-drop-off-locations" class="level1">
-<h1>KDE for Drop-off Locations</h1>
+<section id="create-observational-window-owin" class="level1">
+<h1>Create observational window (owin)</h1>
+<p>When analysing spatial point patterns, it is a good practice to confine the analysis with a geographical area like Singapore boundary. In spatstat, an object called owin is specially designed to represent this polygonal region. The code chunk below is used to create a border of Singapore’s land area and convert it into an owin object of spatstat package using <code>as.owin()</code>.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract coordinates</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>coords2 <span class="ot">&lt;-</span> <span class="fu">st_coordinates</span>(dropoff_sf)</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate standard deviation (sigma) for longitude and latitude</span></span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>sigma_lon2 <span class="ot">&lt;-</span> <span class="fu">sd</span>(coords2[,<span class="dv">1</span>])  <span class="co"># Longitude is the first column</span></span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>sigma_lat2 <span class="ot">&lt;-</span> <span class="fu">sd</span>(coords2[,<span class="dv">2</span>])  <span class="co"># Latitude is the second column</span></span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate Silverman's bandwidth for each dimension</span></span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>n2 <span class="ot">=</span> <span class="fu">nrow</span>(dropoff_sf)</span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>bw_lon2 <span class="ot">=</span> <span class="fl">1.06</span> <span class="sc">*</span> sigma_lon2 <span class="sc">*</span> (n2 <span class="sc">^</span> (<span class="sc">-</span><span class="dv">1</span><span class="sc">/</span><span class="dv">5</span>))</span>
-<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>bw_lat2 <span class="ot">=</span> <span class="fl">1.06</span> <span class="sc">*</span> sigma_lat2 <span class="sc">*</span> (n2 <span class="sc">^</span> (<span class="sc">-</span><span class="dv">1</span><span class="sc">/</span><span class="dv">5</span>))</span>
-<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Use the average or maximum of the two bandwidths</span></span>
-<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>bw2 <span class="ot">=</span> <span class="fu">mean</span>(<span class="fu">c</span>(bw_lon2, bw_lat2))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>dropoff_kde <span class="ot">&lt;-</span> dropoff_sf <span class="sc">%&gt;%</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kde</span>(<span class="at">band_width =</span> bw2, <span class="at">kernel =</span> <span class="st">"quartic"</span>, <span class="at">grid =</span> mpsz)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Using centroids instead of provided `grid` geometries to calculate KDE estimates.</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>
-Done: [=-------------------------------------------------------------------] .
-Done: [====================================================================] .
-                                                                              </code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(dropoff_kde) <span class="sc">+</span></span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_polygons</span>(<span class="at">col =</span> <span class="st">"kde_value"</span>, <span class="at">palette =</span> <span class="st">"viridis"</span>, <span class="at">title =</span> <span class="st">"KDE for Drop-off Points"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create border of Singapore's land area</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>mpsz_border <span class="ot">&lt;-</span> <span class="fu">st_cast</span>(mpsz <span class="sc">%&gt;%</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>                         <span class="fu">summarize</span>(), <span class="st">"POLYGON"</span>)</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert the resulting sf object to an owin object</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>mpsz_owin <span class="ot">&lt;-</span> <span class="fu">as.owin</span>(mpsz_border)</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(mpsz_owin)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="Week2_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
+<p><img src="TKDE_sparr_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
+</section>
+<section id="combine-point-events-object-and-owin-object" class="level1">
+<h1>Combine point events object and owin object</h1>
+<p>In the code chunks below, pick-up and drop-off events located within the observational window are extracted.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>pickup_owin <span class="ot">=</span> pickup_ppp[mpsz_owin]</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(pickup_owin)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in default.charmap(ntypes, chars): Too many types to display every type
+as a different character</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Only 10 out of 606 symbols are shown in the symbol map</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="TKDE_sparr_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>dropoff_owin <span class="ot">=</span> dropoff_ppp[mpsz_owin]</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(dropoff_owin)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="TKDE_sparr_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</section>
+<section id="kde-analysis-using-cross-validation-method" class="level1">
+<h1>KDE Analysis using Cross-validation method</h1>
+<p>The code chunk below computes a kernel density by using the following configurations of <code>density()</code> function of spatstat:</p>
+<ul>
+<li><code>bw.ppl()</code> uses cross-validation to select a smoothing bandwidth for the kernel density estimation.</li>
+<li>The intensity estimate is corrected for edge effect bias i.e.&nbsp;<code>edge=TRUE</code> (default is <code>FALSE</code>).</li>
+</ul>
+<p><code>rescale()</code> function is used to covert the unit of measurement from meter to kilometer.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>pickup_owin <span class="ot">&lt;-</span> <span class="fu">rescale</span>(pickup_owin, <span class="dv">1000</span>, <span class="st">"km"</span>)</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>dropoff_owin <span class="ot">&lt;-</span> <span class="fu">rescale</span>(dropoff_owin, <span class="dv">1000</span>, <span class="st">"km"</span>)</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="fu">marks</span>(pickup_owin) <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>bw <span class="ot">=</span> <span class="fu">bw.diggle</span>(pickup_owin)</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>pickup_tkde <span class="ot">&lt;-</span> <span class="fu">spattemp.density</span>(pickup_owin, <span class="at">h =</span> bw, <span class="at">tt =</span> <span class="fu">as.numeric</span>(pickup_times))</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>dropoff_kde <span class="ot">&lt;-</span> <span class="fu">density</span>(dropoff_owin, <span class="at">sigma=</span>bw.diggle, <span class="at">edge=</span><span class="cn">TRUE</span>)</span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a><span class="fu">png</span>(<span class="st">"pickup_kde.png"</span>, <span class="at">width=</span><span class="dv">600</span>, <span class="at">height=</span><span class="dv">500</span>)</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(pickup_kde)</span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a><span class="fu">png</span>(<span class="st">"dropoff_kde.png"</span>, <span class="at">width=</span><span class="dv">600</span>, <span class="at">height=</span><span class="dv">500</span>)</span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(dropoff_kde)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><img src="pickup_kde.png" class="img-fluid"></p>
+<p><img src="dropoff_kde.png" class="img-fluid"></p>
 
 
 </section>

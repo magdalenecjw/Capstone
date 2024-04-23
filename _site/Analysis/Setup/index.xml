@@ -331,7 +331,7 @@ background-color: null;
 font-style: inherit;">%&gt;%</span></span>
 <span id="cb9-6">  <span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">select</span>(trj_id, rawlng, rawlat) <span class="sc" style="color: #5E5E5E;
+font-style: inherit;">select</span>(trj_id, rawlng, rawlat, pingtimestamp) <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">%&gt;%</span></span>
 <span id="cb9-7">  <span class="fu" style="color: #4758AB;
@@ -371,7 +371,7 @@ background-color: null;
 font-style: inherit;">%&gt;%</span></span>
 <span id="cb9-14">  <span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">select</span>(trj_id, rawlng, rawlat) <span class="sc" style="color: #5E5E5E;
+font-style: inherit;">select</span>(trj_id, rawlng, rawlat, pingtimestamp) <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">%&gt;%</span></span>
 <span id="cb9-15">  <span class="fu" style="color: #4758AB;
@@ -566,21 +566,6 @@ font-style: inherit;">3414</span>)</span></code></pre></div>
  ]]></description>
   <guid>https://capstonejourney.netlify.app/Analysis/Setup/DataPrep.html</guid>
   <pubDate>Fri, 08 Mar 2024 16:00:00 GMT</pubDate>
-</item>
-<item>
-  <title>Literature Review</title>
-  <link>https://capstonejourney.netlify.app/Analysis/Setup/LitReview.html</link>
-  <description><![CDATA[ 
-
-
-
-<p><img src="https://capstonejourney.netlify.app/Images/1.png" class="img-fluid"></p>
-
-
-
- ]]></description>
-  <guid>https://capstonejourney.netlify.app/Analysis/Setup/LitReview.html</guid>
-  <pubDate>Tue, 02 Apr 2024 06:07:30 GMT</pubDate>
 </item>
 </channel>
 </rss>

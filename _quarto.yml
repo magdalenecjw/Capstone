@@ -17,8 +17,6 @@ website:
     right:
       - text: "Setup"
         menu: 
-        - text: "Literature Review"
-          href: Analysis/Setup/LitReview.qmd
         - text: "Data Preparation"
           href: Analysis/Setup/DataPrep.qmd
       - text: "Analysis"

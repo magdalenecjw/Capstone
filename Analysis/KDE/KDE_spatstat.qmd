@@ -82,69 +82,30 @@ dropoff_owin = dropoff_ppp[mpsz_owin]
 plot(dropoff_owin)
 ```
 
-# KDE Analysis using Cross-validation method
+# KDE Analysis using using differnet bandwidth methods
 
-The code chunk below computes a kernel density by using the following configurations of `density()` function of spatstat:
+Computing a kernel density using fixed bandwidth can be done using the `density()` function of spatstat:
 
--   `bw.ppl()` uses cross-validation to select a smoothing bandwidth for the kernel density estimation.
+-   `bw.diggle()` refers to a cross-validated bandwidth selection while `bw.ppl()` refers to a likelihood cross-validated bandwidth selection. Baddeley et. (2016) suggested the use of the `bw.ppl()` algorithm because in their experience it tends to produce the more appropriate values when the pattern consists predominantly of tight clusters. But they also insist that if the purpose of once study is to detect a single tight cluster in the midst of random noise then the `bw.diggle()` method seems to work best.
 -   The intensity estimate is corrected for edge effect bias i.e. `edge=TRUE` (default is `FALSE`).
 
-`rescale()` function is used to covert the unit of measurement from meter to kilometer.
+However, the fixed bandwidth method is very sensitive to highly skew distribution of spatial point patterns over geographical units for example urban versus rural. One way to overcome this problem is by using adaptive bandwidth - in spatstat package, this can be derived using `density.adaptive()` function.
 
 ```{r}
 #| eval: false
+# Rescale to km
 pickup_owin <- rescale(pickup_owin, 1000, "km")
-pickup_kde <- density(pickup_owin, sigma=bw.diggle, edge=TRUE) 
-
 dropoff_owin <- rescale(dropoff_owin, 1000, "km")
+
+# Fixed Bandwidth - LSCV
+pickup_kde <- density(pickup_owin, sigma=bw.diggle, edge=TRUE) 
 dropoff_kde <- density(dropoff_owin, sigma=bw.diggle, edge=TRUE)
 
-png("pickup_kde.png", width=600, height=500)
-plot(pickup_kde)
-
-png("dropoff_kde.png", width=600, height=500)
-plot(dropoff_kde)
-```
-
-![](pickup_kde.png)
-
-![](dropoff_kde.png)
-
-# Working with different automatic bandwidth methods
-
-`bw.diggle()` refers to a cross-validated bandwidth selection while `bw.ppl()` refers to a likelihood cross-validated bandwidth selection. Baddeley et. (2016) suggested the use of the `bw.ppl()` algorithm because in their experience it tends to produce the more appropriate values when the pattern consists predominantly of tight clusters. But they also insist that if the purpose of once study is to detect a single tight cluster in the midst of random noise then the `bw.diggle()` method seems to work best.
-
--   In pick-up locations, both methods do not seem to produce much visible difference.
--   In drop-off locations, slightly more intense clusters seem to be detected using `bw.diggle()`.
-
-```{r}
-#| eval: false
+# Fixed Bandwidth - LCV
 pickup_ppl <- density(pickup_owin, sigma=bw.ppl, edge=TRUE, kernel="gaussian")
 dropoff_ppl <- density(dropoff_owin, sigma=bw.ppl, edge=TRUE, kernel="gaussian")
 
-par(mfrow=c(2,2))
-
-png("pickup_auto.png", width=1200, height=500)
-par(mfrow=c(1,2))
-plot(pickup_kde, main="Least Squares Cross Validation")
-plot(pickup_ppl, main="Likelihood Cross Validation")
-
-png("dropoff_auto.png", width=1200, height=500)
-par(mfrow=c(1,2))
-plot(dropoff_kde, main="Least Squares Cross Validation")
-plot(dropoff_ppl, main="Likelihood Cross Validation")
-```
-
-![](pickup_auto.png)
-
-![](dropoff_auto.png)
-
-# KDE Analysis using adaptive bandwidth
-
-Fixed bandwidth method is very sensitive to highly skew distribution of spatial point patterns over geographical units for example urban versus rural. One way to overcome this problem is by using adaptive bandwidth - in spatstat package, this can be derived using `density.adaptive()` function.
-
-```{r}
-#| eval: false
+# Adaptive Bandwidth
 pickup_adapt <- adaptive.density(pickup_owin, method="kernel")
 dropoff_adapt <- adaptive.density(dropoff_owin, method="kernel")
 

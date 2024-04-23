@@ -17,7 +17,7 @@ The packages used are:
 - tmap package is used to visualize geospatial data on maps.
 
 ```{r}
-pacman::p_load(sf, tidyverse, SpatialKDE, tmap)
+pacman::p_load(sf, tidyverse, SpatialKDE, spatstat, tmap)
 ```
 
 In the code chunk below, the [cleaned data files](DataPrep.qmd) are loaded into R.
@@ -39,7 +39,7 @@ dropoff_sf <- st_as_sf(read_rds("../data/rds/dropoff_sf.rds"))
 
 # KDE for Pick-up Locations
 
-Selecting the optimal bandwidth when performing spatial Kernel Density Estimation (KDE) is crucial because it significantly influences the accuracy of the density estimates. The bandwidth determines the scale of smoothing: if the bandwidth is too large, the data may be oversmoothed which would obscure important spatial features. Conversely, if the bandwidth is too small, it may result in a noisy estimate that overemphasizes random fluctuations. When selecting bandwidth in the context of spatial KDE, it may be useful to begin the analysis with a rule-of-thumb estimate to get a general sense of the spatial distribution. One method could be the Silverman's Rule of Thumb: Adapted for spatial data, this method calculates bandwidth based on the standard deviation of the spatial coordinates and the number of points. 
+Selecting the optimal bandwidth when performing spatial Kernel Density Estimation (KDE) is crucial because it significantly influences the accuracy of the density estimates. The bandwidth determines the scale of smoothing: if the bandwidth is too large, the data may be oversmoothed which would obscure important spatial features. Conversely, if the bandwidth is too small, it may result in a noisy estimate that overemphasizes random fluctuations. 
 
 ```{r}
 # Extract coordinates
@@ -56,8 +56,6 @@ bw_lat = 1.06 * sigma_lat * (n ^ (-1/5))
 
 # Use the average or maximum of the two bandwidths
 bw = mean(c(bw_lon, bw_lat))
-
-bw
 ```
 
 ```{r}
