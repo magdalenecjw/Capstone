@@ -136,6 +136,49 @@ write_rds(grab_sorted, "../data/rds/grab_sorted.rds")
 grab_sorted <- read_rds("../data/rds/grab_sorted.rds")
 ```
 
+```{r}
+#| eval: false
+grab_sf <- grab_sorted %>%
+  st_as_sf(coords = c("rawlng", "rawlat"),
+                      crs = 4326) %>%
+  st_transform(crs = 3414)
+```
+
+```{r}
+#| echo: false
+#| eval: false
+# Save the output as rds file instead of rendering the above code chunks
+write_rds(grab_sf, "../data/rds/grab_sf.rds")
+```
+
+```{r}
+#| echo: false
+# Load rds file instead of rendering the above code chunks
+grab_sf <- read_rds("../data/rds/grab_sf.rds")
+```
+
+Accuracy level is measured on the horizontal plane. 
+
+- On Android devices, this is the radius within which the true location is likely to be found with a 68% probability. A value of 0 indicates no available data and is excluded from publishing. 
+- For iOS devices, the reported coordinates mark the centre of the circle where the true location is randomly located, with the radius defined by the accuracy level. Negative values are invalid data and omitted. 
+
+Huang et al. (2019) compared the accuracy levels by OS type to reveal significant differences, with iOS devices showing a wider range and less reliable location data, evidenced by a long tail in the distribution for accuracy levels. These findings highlight the need for careful consideration when using this data field. As such, the data is checked for the accuracy levels. 
+
+```{r}
+max <- grab_sorted %>%
+  filter(accuracy >= 1000) %>%
+  arrange(desc(accuracy))
+
+max
+```
+
+There are two trj_id with a GPS ping of accuracy level of 149km recorded on an iOS device. Given that the main island of Singapore is about 49km from east to west and the radius of the circle encompassing the true location is defined by the accuracy level, this means the true location of these two GPS pings could be anywhere in Singapore. As such, these two GPS pings should be excluded given their high inaccuracy.  
+
+```{r}
+grab_sorted2 <- grab_sorted %>%
+  filter(!(accuracy == 149000))
+```
+
 # Data Wrangling
 
 There is a need to identify the Pick-up locations. In the code chunk below, `group_by()` function of dplyr package is used to group the data by trajectory ID, before taking the GPS coordinates (latitude and longitude) of the earliest GPS ping timestamp using `filter()` and `min()` function.
@@ -145,7 +188,7 @@ Similar steps are then performed to identify the Drop-off locations. `group_by()
 ```{r}
 #| eval: false
 # Identify Pick-up locations
-pickup_loc <- grab_sorted %>%
+pickup_loc <- grab_sorted2 %>%
   group_by(trj_id) %>%
   filter(pingtimestamp == min(pingtimestamp)) %>%
   ungroup() %>%
@@ -153,7 +196,7 @@ pickup_loc <- grab_sorted %>%
   rename(pickup_lng = rawlng, pickup_lat = rawlat)
 
 # Identify Drop-off locations
-dropoff_loc <- grab_sorted %>%
+dropoff_loc <- grab_sorted2 %>%
   group_by(trj_id) %>%
   filter(pingtimestamp == max(pingtimestamp)) %>%
   ungroup() %>%
@@ -230,7 +273,7 @@ odflow <- pickup_loc %>%
   left_join(dropoff_loc, by = "trj_id")
 
 odflow_sf <- od_coords2line(odflow %>%
-                              select(-"trj_id"),
+                              select("pickup_lng","pickup_lat","dropoff_lng","dropoff_lat"),
                             crs = 4326) %>%
   st_transform(crs = 3414)
 ```
@@ -241,4 +284,25 @@ odflow_sf <- od_coords2line(odflow %>%
 # Save the output as rds file
 write_rds(odflow, "../data/rds/odflow.rds")
 write_rds(odflow_sf, "../data/rds/odflow_sf.rds")
+```
+
+```{r}
+#| echo: false
+# Load rds files instead of rendering the above code chunks
+odflow <- read_rds("../data/rds/odflow.rds")
+odflow_sf <- read_rds("../data/rds/odflow_sf.rds")
+```
+
+```{r}
+odflow <- odflow %>%
+  mutate(duration = pingtimestamp.y - pingtimestamp.x)
+
+mean(odflow$duration)
+```
+
+```{r}
+odflow_sf <- odflow_sf %>%
+  mutate(distance = st_length(geometry))
+
+mean(odflow_sf$distance)
 ```

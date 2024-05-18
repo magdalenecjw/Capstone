@@ -5,8 +5,7 @@ search: false
 listing:
   contents: 
   - KDE_spatstat.qmd
-  - KDE_SpatialKDE.qmd
-  - TKDE_sparr.qmd
+  - TKDE_ks.qmd
   - "!index.qmd"
   type: grid
   categories: true

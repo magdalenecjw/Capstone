@@ -294,6 +294,109 @@ background-color: null;
 font-style: inherit;">rm</span>(grab)</span></code></pre></div>
 </details>
 </div>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb9" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1">grab_sf <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> grab_sorted <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb9-2">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">st_as_sf</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">coords =</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">c</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"rawlng"</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"rawlat"</span>),</span>
+<span id="cb9-3">                      <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">crs =</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4326</span>) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb9-4">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">st_transform</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">crs =</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3414</span>)</span></code></pre></div>
+</details>
+</div>
+<p>Accuracy level is measured on the horizontal plane.</p>
+<ul>
+<li>On Android devices, this is the radius within which the true location is likely to be found with a 68% probability. A value of 0 indicates no available data and is excluded from publishing.</li>
+<li>For iOS devices, the reported coordinates mark the centre of the circle where the true location is randomly located, with the radius defined by the accuracy level. Negative values are invalid data and omitted.</li>
+</ul>
+<p>Huang et al.&nbsp;(2019) compared the accuracy levels by OS type to reveal significant differences, with iOS devices showing a wider range and less reliable location data, evidenced by a long tail in the distribution for accuracy levels. These findings highlight the need for careful consideration when using this data field. As such, the data is checked for the accuracy levels.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb10" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1">max <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> grab_sorted <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb10-2">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">filter</span>(accuracy <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;=</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1000</span>) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb10-3">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">arrange</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">desc</span>(accuracy))</span>
+<span id="cb10-4"></span>
+<span id="cb10-5">max</span></code></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 186 × 9
+   trj_id drivi…¹ osname pingtimestamp       rawlat rawlng speed bearing accur…²
+   &lt;chr&gt;  &lt;chr&gt;   &lt;chr&gt;  &lt;dttm&gt;               &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt;   &lt;int&gt;   &lt;dbl&gt;
+ 1 63624  car     ios    2019-04-21 23:30:08   1.32   104.    -1     252  149000
+ 2 82964  car     ios    2019-04-11 05:07:50   1.28   104.    -1     335  149000
+ 3 83631  car     ios    2019-04-19 06:50:12   1.36   104.    -1     327    5005
+ 4 62994  car     ios    2019-04-20 06:33:55   1.27   104.    -1      54    2556
+ 5 60322  car     ios    2019-04-18 18:47:37   1.27   104.    -1      59    2546
+ 6 71273  car     ios    2019-04-19 08:04:49   1.27   104.    -1      72    2496
+ 7 63242  car     ios    2019-04-11 08:09:31   1.27   104.    -1      52    2465
+ 8 75289  car     ios    2019-04-17 12:34:42   1.28   104.    -1     265    2416
+ 9 60547  car     ios    2019-04-10 00:34:46   1.27   104.    -1      48    2360
+10 51509  car     ios    2019-04-19 07:22:50   1.27   104.    -1     103    2358
+# … with 176 more rows, and abbreviated variable names ¹​driving_mode, ²​accuracy</code></pre>
+</div>
+</div>
+<p>There are two trj_id with a GPS ping of accuracy level of 149km recorded on an iOS device. Given that the main island of Singapore is about 49km from east to west and the radius of the circle encompassing the true location is defined by the accuracy level, this means the true location of these two GPS pings could be anywhere in Singapore. As such, these two GPS pings should be excluded given their high inaccuracy.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb12" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1">grab_sorted2 <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> grab_sorted <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb12-2">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">filter</span>(<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">!</span>(accuracy <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">==</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">149000</span>))</span></code></pre></div>
+</details>
+</div>
 </section>
 <section id="data-wrangling" class="level1">
 <h1>Data Wrangling</h1>
@@ -302,20 +405,20 @@ font-style: inherit;">rm</span>(grab)</span></code></pre></div>
 <div class="cell">
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb9" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><span class="co" style="color: #5E5E5E;
+<div class="sourceCode cell-code" id="cb13" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;"># Identify Pick-up locations</span></span>
-<span id="cb9-2">pickup_loc <span class="ot" style="color: #003B4F;
+<span id="cb13-2">pickup_loc <span class="ot" style="color: #003B4F;
 background-color: null;
-font-style: inherit;">&lt;-</span> grab_sorted <span class="sc" style="color: #5E5E5E;
+font-style: inherit;">&lt;-</span> grab_sorted2 <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">%&gt;%</span></span>
-<span id="cb9-3">  <span class="fu" style="color: #4758AB;
+<span id="cb13-3">  <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">group_by</span>(trj_id) <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">%&gt;%</span></span>
-<span id="cb9-4">  <span class="fu" style="color: #4758AB;
+<span id="cb13-4">  <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">filter</span>(pingtimestamp <span class="sc" style="color: #5E5E5E;
 background-color: null;
@@ -324,38 +427,38 @@ background-color: null;
 font-style: inherit;">min</span>(pingtimestamp)) <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">%&gt;%</span></span>
-<span id="cb9-5">  <span class="fu" style="color: #4758AB;
+<span id="cb13-5">  <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">ungroup</span>() <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">%&gt;%</span></span>
-<span id="cb9-6">  <span class="fu" style="color: #4758AB;
+<span id="cb13-6">  <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">select</span>(trj_id, rawlng, rawlat, pingtimestamp) <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">%&gt;%</span></span>
-<span id="cb9-7">  <span class="fu" style="color: #4758AB;
+<span id="cb13-7">  <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">rename</span>(<span class="at" style="color: #657422;
 background-color: null;
 font-style: inherit;">pickup_lng =</span> rawlng, <span class="at" style="color: #657422;
 background-color: null;
 font-style: inherit;">pickup_lat =</span> rawlat)</span>
-<span id="cb9-8"></span>
-<span id="cb9-9"><span class="co" style="color: #5E5E5E;
+<span id="cb13-8"></span>
+<span id="cb13-9"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;"># Identify Drop-off locations</span></span>
-<span id="cb9-10">dropoff_loc <span class="ot" style="color: #003B4F;
+<span id="cb13-10">dropoff_loc <span class="ot" style="color: #003B4F;
 background-color: null;
-font-style: inherit;">&lt;-</span> grab_sorted <span class="sc" style="color: #5E5E5E;
+font-style: inherit;">&lt;-</span> grab_sorted2 <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">%&gt;%</span></span>
-<span id="cb9-11">  <span class="fu" style="color: #4758AB;
+<span id="cb13-11">  <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">group_by</span>(trj_id) <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">%&gt;%</span></span>
-<span id="cb9-12">  <span class="fu" style="color: #4758AB;
+<span id="cb13-12">  <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">filter</span>(pingtimestamp <span class="sc" style="color: #5E5E5E;
 background-color: null;
@@ -364,17 +467,17 @@ background-color: null;
 font-style: inherit;">max</span>(pingtimestamp)) <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">%&gt;%</span></span>
-<span id="cb9-13">  <span class="fu" style="color: #4758AB;
+<span id="cb13-13">  <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">ungroup</span>() <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">%&gt;%</span></span>
-<span id="cb9-14">  <span class="fu" style="color: #4758AB;
+<span id="cb13-14">  <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">select</span>(trj_id, rawlng, rawlat, pingtimestamp) <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">%&gt;%</span></span>
-<span id="cb9-15">  <span class="fu" style="color: #4758AB;
+<span id="cb13-15">  <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">rename</span>(<span class="at" style="color: #657422;
 background-color: null;
@@ -390,12 +493,12 @@ font-style: inherit;">dropoff_lat =</span> rawlat)</span></code></pre></div>
 <div class="cell">
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb10" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1">pickup_sf <span class="ot" style="color: #003B4F;
+<div class="sourceCode cell-code" id="cb14" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1">pickup_sf <span class="ot" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">st_as_sf</span>(pickup_loc,</span>
-<span id="cb10-2">                      <span class="at" style="color: #657422;
+<span id="cb14-2">                      <span class="at" style="color: #657422;
 background-color: null;
 font-style: inherit;">coords =</span> <span class="fu" style="color: #4758AB;
 background-color: null;
@@ -404,27 +507,27 @@ background-color: null;
 font-style: inherit;">"pickup_lng"</span>, <span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"pickup_lat"</span>),</span>
-<span id="cb10-3">                      <span class="at" style="color: #657422;
+<span id="cb14-3">                      <span class="at" style="color: #657422;
 background-color: null;
 font-style: inherit;">crs =</span> <span class="dv" style="color: #AD0000;
 background-color: null;
 font-style: inherit;">4326</span>) <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">%&gt;%</span></span>
-<span id="cb10-4">  <span class="fu" style="color: #4758AB;
+<span id="cb14-4">  <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">st_transform</span>(<span class="at" style="color: #657422;
 background-color: null;
 font-style: inherit;">crs =</span> <span class="dv" style="color: #AD0000;
 background-color: null;
 font-style: inherit;">3414</span>)</span>
-<span id="cb10-5"></span>
-<span id="cb10-6">dropoff_sf <span class="ot" style="color: #003B4F;
+<span id="cb14-5"></span>
+<span id="cb14-6">dropoff_sf <span class="ot" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">st_as_sf</span>(dropoff_loc,</span>
-<span id="cb10-7">                       <span class="at" style="color: #657422;
+<span id="cb14-7">                       <span class="at" style="color: #657422;
 background-color: null;
 font-style: inherit;">coords =</span> <span class="fu" style="color: #4758AB;
 background-color: null;
@@ -433,14 +536,14 @@ background-color: null;
 font-style: inherit;">"dropoff_lng"</span>, <span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"dropoff_lat"</span>),</span>
-<span id="cb10-8">                       <span class="at" style="color: #657422;
+<span id="cb14-8">                       <span class="at" style="color: #657422;
 background-color: null;
 font-style: inherit;">crs =</span> <span class="dv" style="color: #AD0000;
 background-color: null;
 font-style: inherit;">4326</span>) <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">%&gt;%</span></span>
-<span id="cb10-9">  <span class="fu" style="color: #4758AB;
+<span id="cb14-9">  <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">st_transform</span>(<span class="at" style="color: #657422;
 background-color: null;
@@ -453,59 +556,59 @@ font-style: inherit;">3414</span>)</span></code></pre></div>
 <div class="cell">
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb11" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><span class="co" style="color: #5E5E5E;
+<div class="sourceCode cell-code" id="cb15" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;"># Visualise drop-off locations</span></span>
-<span id="cb11-2"><span class="fu" style="color: #4758AB;
+<span id="cb15-2"><span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">tm_shape</span>(mpsz) <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">+</span> </span>
-<span id="cb11-3">  <span class="fu" style="color: #4758AB;
+<span id="cb15-3">  <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">tm_polygons</span>() <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">+</span></span>
-<span id="cb11-4"><span class="fu" style="color: #4758AB;
+<span id="cb15-4"><span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">tm_shape</span>(pickup_sf) <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">+</span> </span>
-<span id="cb11-5">  <span class="fu" style="color: #4758AB;
+<span id="cb15-5">  <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">tm_dots</span>()</span></code></pre></div>
 </details>
 <div class="cell-output-display">
-<p><img src="https://capstonejourney.netlify.app/Analysis/Setup/DataPrep_files/figure-html/unnamed-chunk-16-1.png" class="img-fluid" width="672"></p>
+<p><img src="https://capstonejourney.netlify.app/Analysis/Setup/DataPrep_files/figure-html/unnamed-chunk-21-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <div class="cell">
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb12" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><span class="co" style="color: #5E5E5E;
+<div class="sourceCode cell-code" id="cb16" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;"># Visualise drop-off locations</span></span>
-<span id="cb12-2"><span class="fu" style="color: #4758AB;
+<span id="cb16-2"><span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">tm_shape</span>(mpsz) <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">+</span> </span>
-<span id="cb12-3">  <span class="fu" style="color: #4758AB;
+<span id="cb16-3">  <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">tm_polygons</span>() <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">+</span></span>
-<span id="cb12-4"><span class="fu" style="color: #4758AB;
+<span id="cb16-4"><span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">tm_shape</span>(dropoff_sf) <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">+</span> </span>
-<span id="cb12-5">  <span class="fu" style="color: #4758AB;
+<span id="cb16-5">  <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">tm_dots</span>()</span></code></pre></div>
 </details>
 <div class="cell-output-display">
-<p><img src="https://capstonejourney.netlify.app/Analysis/Setup/DataPrep_files/figure-html/unnamed-chunk-17-1.png" class="img-fluid" width="672"></p>
+<p><img src="https://capstonejourney.netlify.app/Analysis/Setup/DataPrep_files/figure-html/unnamed-chunk-22-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 </section>
@@ -516,41 +619,45 @@ font-style: inherit;">tm_dots</span>()</span></code></pre></div>
 <div class="cell">
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb13" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1">odflow <span class="ot" style="color: #003B4F;
+<div class="sourceCode cell-code" id="cb17" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1">odflow <span class="ot" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">&lt;-</span> pickup_loc <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">%&gt;%</span></span>
-<span id="cb13-2">  <span class="fu" style="color: #4758AB;
+<span id="cb17-2">  <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">left_join</span>(dropoff_loc, <span class="at" style="color: #657422;
 background-color: null;
 font-style: inherit;">by =</span> <span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"trj_id"</span>)</span>
-<span id="cb13-3"></span>
-<span id="cb13-4">odflow_sf <span class="ot" style="color: #003B4F;
+<span id="cb17-3"></span>
+<span id="cb17-4">odflow_sf <span class="ot" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">od_coords2line</span>(odflow <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">%&gt;%</span></span>
-<span id="cb13-5">                              <span class="fu" style="color: #4758AB;
+<span id="cb17-5">                              <span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">select</span>(<span class="sc" style="color: #5E5E5E;
+font-style: inherit;">select</span>(<span class="st" style="color: #20794D;
 background-color: null;
-font-style: inherit;">-</span><span class="st" style="color: #20794D;
+font-style: inherit;">"pickup_lng"</span>,<span class="st" style="color: #20794D;
 background-color: null;
-font-style: inherit;">"trj_id"</span>),</span>
-<span id="cb13-6">                            <span class="at" style="color: #657422;
+font-style: inherit;">"pickup_lat"</span>,<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"dropoff_lng"</span>,<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"dropoff_lat"</span>),</span>
+<span id="cb17-6">                            <span class="at" style="color: #657422;
 background-color: null;
 font-style: inherit;">crs =</span> <span class="dv" style="color: #AD0000;
 background-color: null;
 font-style: inherit;">4326</span>) <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">%&gt;%</span></span>
-<span id="cb13-7">  <span class="fu" style="color: #4758AB;
+<span id="cb17-7">  <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">st_transform</span>(<span class="at" style="color: #657422;
 background-color: null;
@@ -558,6 +665,58 @@ font-style: inherit;">crs =</span> <span class="dv" style="color: #AD0000;
 background-color: null;
 font-style: inherit;">3414</span>)</span></code></pre></div>
 </details>
+</div>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb18" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1">odflow <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> odflow <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb18-2">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">mutate</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">duration =</span> pingtimestamp.y <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> pingtimestamp.x)</span>
+<span id="cb18-3"></span>
+<span id="cb18-4"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">mean</span>(odflow<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">$</span>duration)</span></code></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Time difference of 20.85986 mins</code></pre>
+</div>
+</div>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb20" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1">odflow_sf <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> odflow_sf <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb20-2">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">mutate</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">distance =</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">st_length</span>(geometry))</span>
+<span id="cb20-3"></span>
+<span id="cb20-4"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">mean</span>(odflow_sf<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">$</span>distance)</span></code></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>14131.02 [m]</code></pre>
+</div>
 </div>
 
 

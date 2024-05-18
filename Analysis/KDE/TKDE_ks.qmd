@@ -1,0 +1,70 @@
+---
+pagetitle: KDE Analysis | Capstone
+title: TKDE Analysis using ks package
+---
+
+![](../../Images/3.png){width="500"}
+
+# Getting Started
+
+The code chunk below uses `p_load()` function of pacman package to check if the required packages have been installed on the computer. If they are, the packages will be launched.
+
+The packages used are:
+
+-   sf package is used for importing, managing, and processing geospatial data.
+-   tidyverse package for aspatial data wrangling.
+-   ks package to perform multivariate kernel density estimation (KDE).
+
+```{r}
+pacman::p_load(sf, tidyverse, ks, lubridate, rgl)
+```
+
+In the code chunk below, the [cleaned data files](DataPrep.qmd) are loaded into R.
+
+```{r}
+#| eval: false
+# Load base map
+mpsz = st_read(dsn = "../data/geospatial", 
+               layer = "MPSZ-2019") %>%
+  st_transform(crs = 3414) %>%
+  summarize()
+
+# Load rds file
+pickup_loc <- read_rds("../data/rds/pickup_loc.rds") %>%
+  mutate(pingtimestamp = as.integer(pingtimestamp)) %>%
+  select(-trj_id)
+dropoff_loc <- read_rds("../data/rds/dropoff_loc.rds") %>%
+  mutate(pingtimestamp = as.integer(pingtimestamp)) %>%
+  select(-trj_id)
+pickup_sf <- st_as_sf(read_rds("../data/rds/pickup_sf.rds"))
+dropoff_sf <- st_as_sf(read_rds("../data/rds/dropoff_sf.rds"))
+```
+# Without normalization
+
+```{r}
+#| eval: false
+kde_ks_original <- kde(pickup_loc, H = Hlscv(pickup_loc))
+
+summary(kde_ks_original$estimate)
+```
+
+# With normalization
+
+```{r}
+#| eval: false
+# Normalize the data to the range [0, 1]
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+
+pickup_norm <- as.data.frame(lapply(pickup_loc, normalize))
+
+# Store the original ranges for scaling back
+range_x <- range(pickup_loc$pickup_lng)
+range_y <- range(pickup_loc$pickup_lng)
+range_time <- range(pickup_loc$pingtimestamp)
+
+kde_ks <- kde(pickup_norm, H = Hlscv(pickup_norm))
+
+plot(kde_ks)
+```

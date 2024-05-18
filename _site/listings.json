@@ -3,9 +3,8 @@
     "listing": "/index.html",
     "items": [
       "/Analysis/Setup/DataPrep.html",
-      "/Analysis/KDE/KDE_SpatialKDE.html",
       "/Analysis/KDE/KDE_spatstat.html",
-      "/Analysis/KDE/TKDE_sparr.html",
+      "/Analysis/KDE/TKDE_ks.html",
       "/Analysis/NKDE/Week1.html",
       "/Analysis/TNKDE/Week1.html"
     ]
@@ -25,9 +24,8 @@
   {
     "listing": "/Analysis/KDE/index.html",
     "items": [
-      "/Analysis/KDE/KDE_SpatialKDE.html",
       "/Analysis/KDE/KDE_spatstat.html",
-      "/Analysis/KDE/TKDE_sparr.html"
+      "/Analysis/KDE/TKDE_ks.html"
     ]
   },
   {

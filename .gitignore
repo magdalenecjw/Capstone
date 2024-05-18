@@ -5,3 +5,5 @@
 /.quarto/
 data/
 .RDataTmp2
+test_scripts/
+resulting_images/

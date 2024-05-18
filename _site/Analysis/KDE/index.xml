@@ -17,406 +17,7 @@
 <width>144</width>
 </image>
 <generator>quarto-1.3.450</generator>
-<lastBuildDate>Tue, 23 Apr 2024 03:50:01 GMT</lastBuildDate>
-<item>
-  <title>KDE Analysis using SpatialKDE package</title>
-  <link>https://capstonejourney.netlify.app/Analysis/KDE/KDE_SpatialKDE.html</link>
-  <description><![CDATA[ 
-
-
-
-<p><img src="https://capstonejourney.netlify.app/Images/3.png" class="img-fluid" width="500"></p>
-<section id="getting-started" class="level1">
-<h1>Getting Started</h1>
-<p>The code chunk below uses <code>p_load()</code> function of pacman package to check if the required packages have been installed on the computer. If they are, the packages will be launched.</p>
-<p>The packages used are:</p>
-<ul>
-<li>sf package is used for importing, managing, and processing geospatial data.</li>
-<li>tidyverse package for aspatial data wrangling.</li>
-<li>SpatialKDE package to perform 1st-order spatial point patterns analysis and derive kernel density estimation (KDE) layer.</li>
-<li>tmap package is used to visualize geospatial data on maps.</li>
-</ul>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1">pacman<span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">::</span><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">p_load</span>(sf, tidyverse, SpatialKDE, spatstat, tmap)</span></code></pre></div>
-</div>
-<p>In the code chunk below, the <a href="DataPrep.qmd">cleaned data files</a> are loaded into R.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># Load base map</span></span>
-<span id="cb2-2">mpsz <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">=</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">st_read</span>(<span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">dsn =</span> <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"../data/geospatial"</span>, </span>
-<span id="cb2-3">               <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">layer =</span> <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"MPSZ-2019"</span>) <span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">%&gt;%</span></span>
-<span id="cb2-4">  <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">st_transform</span>(<span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">crs =</span> <span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">3414</span>) <span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">%&gt;%</span></span>
-<span id="cb2-5">  <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">select</span>(PLN_AREA_N, geometry) <span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">%&gt;%</span></span>
-<span id="cb2-6">  <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">group_by</span>(PLN_AREA_N) <span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">%&gt;%</span></span>
-<span id="cb2-7">  <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">summarise</span>() <span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">%&gt;%</span></span>
-<span id="cb2-8">  <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">ungroup</span>()</span></code></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>Reading layer `MPSZ-2019' from data source 
-  `C:\magdalenecjw\Capstone\Analysis\data\geospatial' using driver `ESRI Shapefile'
-Simple feature collection with 332 features and 6 fields
-Geometry type: MULTIPOLYGON
-Dimension:     XY
-Bounding box:  xmin: 103.6057 ymin: 1.158699 xmax: 104.0885 ymax: 1.470775
-Geodetic CRS:  WGS 84</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># Load rds file</span></span>
-<span id="cb4-2">pickup_sf <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">st_as_sf</span>(<span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">read_rds</span>(<span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"../data/rds/pickup_sf.rds"</span>))</span>
-<span id="cb4-3">dropoff_sf <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">st_as_sf</span>(<span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">read_rds</span>(<span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"../data/rds/dropoff_sf.rds"</span>))</span></code></pre></div>
-</div>
-</section>
-<section id="kde-for-pick-up-locations" class="level1">
-<h1>KDE for Pick-up Locations</h1>
-<p>Selecting the optimal bandwidth when performing spatial Kernel Density Estimation (KDE) is crucial because it significantly influences the accuracy of the density estimates. The bandwidth determines the scale of smoothing: if the bandwidth is too large, the data may be oversmoothed which would obscure important spatial features. Conversely, if the bandwidth is too small, it may result in a noisy estimate that overemphasizes random fluctuations.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># Extract coordinates</span></span>
-<span id="cb5-2">coords <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">st_coordinates</span>(pickup_sf)</span>
-<span id="cb5-3"></span>
-<span id="cb5-4"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># Calculate standard deviation (sigma) for longitude and latitude</span></span>
-<span id="cb5-5">sigma_lon <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">sd</span>(coords[,<span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">1</span>])  <span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># Longitude is the first column</span></span>
-<span id="cb5-6">sigma_lat <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">sd</span>(coords[,<span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">2</span>])  <span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># Latitude is the second column</span></span>
-<span id="cb5-7"></span>
-<span id="cb5-8"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># Calculate Silverman's bandwidth for each dimension</span></span>
-<span id="cb5-9">n <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">=</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">nrow</span>(pickup_sf)</span>
-<span id="cb5-10">bw_lon <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">=</span> <span class="fl" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">1.06</span> <span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">*</span> sigma_lon <span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">*</span> (n <span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">^</span> (<span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">1</span><span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">/</span><span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">5</span>))</span>
-<span id="cb5-11">bw_lat <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">=</span> <span class="fl" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">1.06</span> <span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">*</span> sigma_lat <span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">*</span> (n <span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">^</span> (<span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">1</span><span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">/</span><span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">5</span>))</span>
-<span id="cb5-12"></span>
-<span id="cb5-13"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># Use the average or maximum of the two bandwidths</span></span>
-<span id="cb5-14">bw <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">=</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">mean</span>(<span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">c</span>(bw_lon, bw_lat))</span></code></pre></div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb6" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1">pickup_kde <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">&lt;-</span> pickup_sf <span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">%&gt;%</span></span>
-<span id="cb6-2">  <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">kde</span>(<span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">band_width =</span> bw, <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">kernel =</span> <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"quartic"</span>, <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">grid =</span> mpsz)</span></code></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Using centroids instead of provided `grid` geometries to calculate KDE estimates.</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>
-Done: [=-------------------------------------------------------------------] .
-Done: [====================================================================] .
-                                                                              </code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb9" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">tm_shape</span>(pickup_kde) <span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">+</span></span>
-<span id="cb9-2">  <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">tm_polygons</span>(<span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">col =</span> <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"kde_value"</span>, <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">palette =</span> <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"viridis"</span>, <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">title =</span> <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"KDE for Pick-up Points"</span>)</span></code></pre></div>
-<div class="cell-output-display">
-<p><img src="https://capstonejourney.netlify.app/Analysis/KDE/KDE_SpatialKDE_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
-</div>
-</div>
-</section>
-<section id="kde-for-drop-off-locations" class="level1">
-<h1>KDE for Drop-off Locations</h1>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb10" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># Extract coordinates</span></span>
-<span id="cb10-2">coords2 <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">st_coordinates</span>(dropoff_sf)</span>
-<span id="cb10-3"></span>
-<span id="cb10-4"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># Calculate standard deviation (sigma) for longitude and latitude</span></span>
-<span id="cb10-5">sigma_lon2 <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">sd</span>(coords2[,<span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">1</span>])  <span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># Longitude is the first column</span></span>
-<span id="cb10-6">sigma_lat2 <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">sd</span>(coords2[,<span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">2</span>])  <span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># Latitude is the second column</span></span>
-<span id="cb10-7"></span>
-<span id="cb10-8"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># Calculate Silverman's bandwidth for each dimension</span></span>
-<span id="cb10-9">n2 <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">=</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">nrow</span>(dropoff_sf)</span>
-<span id="cb10-10">bw_lon2 <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">=</span> <span class="fl" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">1.06</span> <span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">*</span> sigma_lon2 <span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">*</span> (n2 <span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">^</span> (<span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">1</span><span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">/</span><span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">5</span>))</span>
-<span id="cb10-11">bw_lat2 <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">=</span> <span class="fl" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">1.06</span> <span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">*</span> sigma_lat2 <span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">*</span> (n2 <span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">^</span> (<span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">1</span><span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">/</span><span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">5</span>))</span>
-<span id="cb10-12"></span>
-<span id="cb10-13"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># Use the average or maximum of the two bandwidths</span></span>
-<span id="cb10-14">bw2 <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">=</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">mean</span>(<span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">c</span>(bw_lon2, bw_lat2))</span></code></pre></div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb11" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1">dropoff_kde <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">&lt;-</span> dropoff_sf <span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">%&gt;%</span></span>
-<span id="cb11-2">  <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">kde</span>(<span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">band_width =</span> bw2, <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">kernel =</span> <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"quartic"</span>, <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">grid =</span> mpsz)</span></code></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Using centroids instead of provided `grid` geometries to calculate KDE estimates.</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>
-Done: [=-------------------------------------------------------------------] .
-Done: [====================================================================] .
-                                                                              </code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb14" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">tm_shape</span>(dropoff_kde) <span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">+</span></span>
-<span id="cb14-2">  <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">tm_polygons</span>(<span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">col =</span> <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"kde_value"</span>, <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">palette =</span> <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"viridis"</span>, <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">title =</span> <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"KDE for Drop-off Points"</span>)</span></code></pre></div>
-<div class="cell-output-display">
-<p><img src="https://capstonejourney.netlify.app/Analysis/KDE/KDE_SpatialKDE_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
-</div>
-</div>
-
-
-</section>
-
- ]]></description>
-  <guid>https://capstonejourney.netlify.app/Analysis/KDE/KDE_SpatialKDE.html</guid>
-  <pubDate>Tue, 23 Apr 2024 03:50:01 GMT</pubDate>
-</item>
+<lastBuildDate>Sat, 18 May 2024 13:56:37 GMT</lastBuildDate>
 <item>
   <title>KDE Analysis using spatstat package</title>
   <link>https://capstonejourney.netlify.app/Analysis/KDE/KDE_spatstat.html</link>
@@ -440,7 +41,7 @@ font-style: inherit;">"KDE for Drop-off Points"</span>)</span></code></pre></div
 background-color: null;
 font-style: inherit;">::</span><span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">p_load</span>(sf, tidyverse, spatstat, tmap)</span></code></pre></div>
+font-style: inherit;">p_load</span>(sf, tidyverse, spatstat, tmap, lubridate)</span></code></pre></div>
 </div>
 <p>In the code chunk below, the <a href="DataPrep.qmd">cleaned data files</a> are loaded into R.</p>
 <div class="cell">
@@ -529,65 +130,41 @@ font-style: inherit;">plot</span>(pickup_ppp)</span></code></pre></div>
 <p><img src="https://capstonejourney.netlify.app/Analysis/KDE/KDE_spatstat_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb8" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1">dropoff_ppp <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">as.ppp</span>(dropoff_sf)</span></code></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning in as.ppp.sf(dropoff_sf): only first attribute column is used for marks</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb10" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">marks</span>(dropoff_ppp) <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">&lt;-</span> <span class="cn" style="color: #8f5902;
-background-color: null;
-font-style: inherit;">NULL</span></span>
-<span id="cb10-2"></span>
-<span id="cb10-3"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">plot</span>(dropoff_ppp)</span></code></pre></div>
-<div class="cell-output-display">
-<p><img src="https://capstonejourney.netlify.app/Analysis/KDE/KDE_spatstat_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
-</div>
-</div>
 </section>
 <section id="create-observational-window-owin" class="level1">
 <h1>Create observational window (owin)</h1>
 <p>When analysing spatial point patterns, it is a good practice to confine the analysis with a geographical area like Singapore boundary. In spatstat, an object called owin is specially designed to represent this polygonal region. The code chunk below is used to create a border of Singapore’s land area and convert it into an owin object of spatstat package using <code>as.owin()</code>.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb11" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><span class="co" style="color: #5E5E5E;
+<div class="sourceCode cell-code" id="cb8" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;"># Create border of Singapore's land area</span></span>
-<span id="cb11-2">mpsz_border <span class="ot" style="color: #003B4F;
+<span id="cb8-2">mpsz_border <span class="ot" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">st_cast</span>(mpsz <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">%&gt;%</span></span>
-<span id="cb11-3">                         <span class="fu" style="color: #4758AB;
+<span id="cb8-3">                         <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">summarize</span>(), <span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"POLYGON"</span>)</span>
-<span id="cb11-4"></span>
-<span id="cb11-5"><span class="co" style="color: #5E5E5E;
+<span id="cb8-4"></span>
+<span id="cb8-5"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;"># Convert the resulting sf object to an owin object</span></span>
-<span id="cb11-6">mpsz_owin <span class="ot" style="color: #003B4F;
+<span id="cb8-6">mpsz_owin <span class="ot" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">as.owin</span>(mpsz_border)</span>
-<span id="cb11-7"></span>
-<span id="cb11-8"><span class="fu" style="color: #4758AB;
+<span id="cb8-7"></span>
+<span id="cb8-8"><span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">plot</span>(mpsz_owin)</span></code></pre></div>
 <div class="cell-output-display">
-<p><img src="https://capstonejourney.netlify.app/Analysis/KDE/KDE_spatstat_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
+<p><img src="https://capstonejourney.netlify.app/Analysis/KDE/KDE_spatstat_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 </section>
@@ -595,43 +172,22 @@ font-style: inherit;">plot</span>(mpsz_owin)</span></code></pre></div>
 <h1>Combine point events object and owin object</h1>
 <p>In the code chunks below, pick-up and drop-off events located within the observational window are extracted.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb12" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1">pickup_owin <span class="ot" style="color: #003B4F;
+<div class="sourceCode cell-code" id="cb9" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1">pickup_owin <span class="ot" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">=</span> pickup_ppp[mpsz_owin]</span>
-<span id="cb12-2"></span>
-<span id="cb12-3"><span class="fu" style="color: #4758AB;
+<span id="cb9-2"></span>
+<span id="cb9-3"><span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">plot</span>(pickup_owin)</span></code></pre></div>
 <div class="cell-output-display">
-<p><img src="https://capstonejourney.netlify.app/Analysis/KDE/KDE_spatstat_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
-</div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb13" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1">dropoff_owin <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">=</span> dropoff_ppp[mpsz_owin]</span>
-<span id="cb13-2"></span>
-<span id="cb13-3"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">plot</span>(dropoff_owin)</span></code></pre></div>
-<div class="cell-output-display">
-<p><img src="https://capstonejourney.netlify.app/Analysis/KDE/KDE_spatstat_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid" width="672"></p>
+<p><img src="https://capstonejourney.netlify.app/Analysis/KDE/KDE_spatstat_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 </section>
-<section id="kde-analysis-using-using-differnet-bandwidth-methods" class="level1">
-<h1>KDE Analysis using using differnet bandwidth methods</h1>
-<p>Computing a kernel density using fixed bandwidth can be done using the <code>density()</code> function of spatstat:</p>
-<ul>
-<li><code>bw.diggle()</code> refers to a cross-validated bandwidth selection while <code>bw.ppl()</code> refers to a likelihood cross-validated bandwidth selection. Baddeley et. (2016) suggested the use of the <code>bw.ppl()</code> algorithm because in their experience it tends to produce the more appropriate values when the pattern consists predominantly of tight clusters. But they also insist that if the purpose of once study is to detect a single tight cluster in the midst of random noise then the <code>bw.diggle()</code> method seems to work best.</li>
-<li>The intensity estimate is corrected for edge effect bias i.e.&nbsp;<code>edge=TRUE</code> (default is <code>FALSE</code>).</li>
-</ul>
-<p>However, the fixed bandwidth method is very sensitive to highly skew distribution of spatial point patterns over geographical units for example urban versus rural. One way to overcome this problem is by using adaptive bandwidth - in spatstat package, this can be derived using <code>density.adaptive()</code> function.</p>
+<section id="pick-up-locations---edge-correction" class="level1">
+<h1>Pick-up Locations - Edge correction</h1>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb14" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># Rescale to km</span></span>
-<span id="cb14-2">pickup_owin <span class="ot" style="color: #003B4F;
+<div class="sourceCode cell-code" id="cb10" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1">pickup_owin <span class="ot" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
 background-color: null;
@@ -640,20 +196,8 @@ background-color: null;
 font-style: inherit;">1000</span>, <span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"km"</span>)</span>
-<span id="cb14-3">dropoff_owin <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">rescale</span>(dropoff_owin, <span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">1000</span>, <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"km"</span>)</span>
-<span id="cb14-4"></span>
-<span id="cb14-5"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># Fixed Bandwidth - LSCV</span></span>
-<span id="cb14-6">pickup_kde <span class="ot" style="color: #003B4F;
+<span id="cb10-2"></span>
+<span id="cb10-3">kde1 <span class="ot" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
 background-color: null;
@@ -663,8 +207,848 @@ font-style: inherit;">sigma=</span>bw.diggle, <span class="at" style="color: #65
 background-color: null;
 font-style: inherit;">edge=</span><span class="cn" style="color: #8f5902;
 background-color: null;
-font-style: inherit;">TRUE</span>) </span>
-<span id="cb14-7">dropoff_kde <span class="ot" style="color: #003B4F;
+font-style: inherit;">TRUE</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">diggle=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">FALSE</span>)</span>
+<span id="cb10-4">kde2 <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">density</span>(pickup_owin, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">sigma=</span>bw.diggle, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">edge=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">diggle=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>)</span>
+<span id="cb10-5"></span>
+<span id="cb10-6"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">png</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">paste0</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Pick-up - Edge Correction/pickup_edge.png"</span>), <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">width=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1000</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">height=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">350</span>)</span>
+<span id="cb10-7"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">par</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">mfrow=</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">c</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>,<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>))</span>
+<span id="cb10-8"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(kde1, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">main=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Edge Correction - Default"</span>)</span>
+<span id="cb10-9"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(kde2, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">main=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Edge Correction - Improved"</span>)</span>
+<span id="cb10-10"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">dev.off</span>()</span></code></pre></div>
+</div>
+<section id="filter-by-planning-area" class="level2">
+<h2 class="anchored" data-anchor-id="filter-by-planning-area">Filter by planning area</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1">areas <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">unique</span>(mpsz<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">$</span>PLN_AREA_N)</span>
+<span id="cb11-2"></span>
+<span id="cb11-3"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">for</span> (i <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">in</span> areas){</span>
+<span id="cb11-4">  mpsz_filter <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> mpsz <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb11-5">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">filter</span>(PLN_AREA_N <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">==</span> i)</span>
+<span id="cb11-6">  </span>
+<span id="cb11-7">  filter_owin <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">as.owin</span>(mpsz_filter)</span>
+<span id="cb11-8">    </span>
+<span id="cb11-9">  filter_ppp <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">=</span> pickup_ppp[filter_owin]</span>
+<span id="cb11-10">  filter_ppp <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">rescale</span>(filter_ppp, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1000</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"km"</span>)</span>
+<span id="cb11-11">    </span>
+<span id="cb11-12">  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Initialize an error flag</span></span>
+<span id="cb11-13">  error_occurred <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">FALSE</span></span>
+<span id="cb11-14">  </span>
+<span id="cb11-15">  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Attempt to calculate kde1</span></span>
+<span id="cb11-16">  kde1 <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">tryCatch</span>({</span>
+<span id="cb11-17">    <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">density</span>(filter_ppp, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">sigma=</span>bw.diggle, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">edge=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">diggle=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">FALSE</span>)</span>
+<span id="cb11-18">  }, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">error =</span> <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">function</span>(e) {</span>
+<span id="cb11-19">    <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">cat</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Error in processing kde1 for area"</span>, i, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">": "</span>, e<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">$</span>message, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">\n</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span>
+<span id="cb11-20">    error_occurred <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;&lt;-</span> <span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Update error flag</span></span>
+<span id="cb11-21">    <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">return</span>(<span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">NULL</span>)</span>
+<span id="cb11-22">  })</span>
+<span id="cb11-23">  </span>
+<span id="cb11-24">  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Skip this iteration if an error occurred in kde1</span></span>
+<span id="cb11-25">  <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">if</span> (error_occurred) {</span>
+<span id="cb11-26">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">next</span></span>
+<span id="cb11-27">  }</span>
+<span id="cb11-28">  </span>
+<span id="cb11-29">  kde2 <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">density</span>(filter_ppp, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">sigma=</span>bw.diggle, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">edge=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">diggle=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>)</span>
+<span id="cb11-30">  </span>
+<span id="cb11-31">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">png</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">paste0</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Pick-up - Edge Correction/pickup_edge_"</span>,i,<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">".png"</span>), <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">width=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1000</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">height=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">500</span>)</span>
+<span id="cb11-32">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">par</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">mfrow=</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">c</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>,<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>))</span>
+<span id="cb11-33">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(kde1, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">main=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Edge Correction - Default"</span>)</span>
+<span id="cb11-34">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(kde2, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">main=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Edge Correction - Improved"</span>)</span>
+<span id="cb11-35">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">dev.off</span>()</span>
+<span id="cb11-36">}</span></code></pre></div>
+</div>
+</section>
+</section>
+<section id="drop-off-locations---edge-correction" class="level1">
+<h1>Drop-off Locations - Edge correction</h1>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1">dropoff_ppp <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">as.ppp</span>(dropoff_sf)</span></code></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in as.ppp.sf(dropoff_sf): only first attribute column is used for marks</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb14" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">marks</span>(dropoff_ppp) <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">NULL</span></span>
+<span id="cb14-2"></span>
+<span id="cb14-3"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(dropoff_ppp)</span></code></pre></div>
+<div class="cell-output-display">
+<p><img src="https://capstonejourney.netlify.app/Analysis/KDE/KDE_spatstat_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1">dropoff_owin <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">=</span> dropoff_ppp[mpsz_owin]</span>
+<span id="cb15-2">dropoff_owin <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">rescale</span>(dropoff_owin, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1000</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"km"</span>)</span>
+<span id="cb15-3"></span>
+<span id="cb15-4">kde1 <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">density</span>(dropoff_owin, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">sigma=</span>bw.diggle, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">edge=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">diggle=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">FALSE</span>)</span>
+<span id="cb15-5">kde2 <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">density</span>(dropoff_owin, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">sigma=</span>bw.diggle, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">edge=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">diggle=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>)</span>
+<span id="cb15-6"></span>
+<span id="cb15-7"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">png</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">paste0</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Drop-off - Edge Correction/dropoff_edge.png"</span>), <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">width=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1000</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">height=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">350</span>)</span>
+<span id="cb15-8"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">par</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">mfrow=</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">c</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>,<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>))</span>
+<span id="cb15-9"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(kde1, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">main=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Edge Correction - Default"</span>)</span>
+<span id="cb15-10"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(kde2, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">main=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Edge Correction - Improved"</span>)</span>
+<span id="cb15-11"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">dev.off</span>()</span></code></pre></div>
+</div>
+<section id="filter-by-planning-area-1" class="level2">
+<h2 class="anchored" data-anchor-id="filter-by-planning-area-1">Filter by planning area</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1">areas <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">unique</span>(mpsz<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">$</span>PLN_AREA_N)</span>
+<span id="cb16-2"></span>
+<span id="cb16-3"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">#areas &lt;- "NOVENA"</span></span>
+<span id="cb16-4"></span>
+<span id="cb16-5"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">for</span> (i <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">in</span> areas){</span>
+<span id="cb16-6">  mpsz_filter <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> mpsz <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb16-7">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">filter</span>(PLN_AREA_N <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">==</span> i)</span>
+<span id="cb16-8">  </span>
+<span id="cb16-9">  filter_owin <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">as.owin</span>(mpsz_filter)</span>
+<span id="cb16-10">    </span>
+<span id="cb16-11">  filter_ppp <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">=</span> dropoff_ppp[filter_owin]</span>
+<span id="cb16-12">  filter_ppp <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">rescale</span>(filter_ppp, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1000</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"km"</span>)</span>
+<span id="cb16-13">    </span>
+<span id="cb16-14">  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Initialize an error flag</span></span>
+<span id="cb16-15">  error_occurred <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">FALSE</span></span>
+<span id="cb16-16">  </span>
+<span id="cb16-17">  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Attempt to calculate kde1</span></span>
+<span id="cb16-18">  kde1 <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">tryCatch</span>({</span>
+<span id="cb16-19">    <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">density</span>(filter_ppp, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">sigma=</span>bw.diggle, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">edge=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">diggle=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">FALSE</span>)</span>
+<span id="cb16-20">  }, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">error =</span> <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">function</span>(e) {</span>
+<span id="cb16-21">    <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">cat</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Error in processing kde1 for area"</span>, i, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">": "</span>, e<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">$</span>message, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">\n</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span>
+<span id="cb16-22">    error_occurred <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;&lt;-</span> <span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Update error flag</span></span>
+<span id="cb16-23">    <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">return</span>(<span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">NULL</span>)</span>
+<span id="cb16-24">  })</span>
+<span id="cb16-25">  </span>
+<span id="cb16-26">  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Skip this iteration if an error occurred in kde1</span></span>
+<span id="cb16-27">  <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">if</span> (error_occurred) {</span>
+<span id="cb16-28">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">next</span></span>
+<span id="cb16-29">  }</span>
+<span id="cb16-30">  </span>
+<span id="cb16-31">  kde2 <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">density</span>(filter_ppp, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">sigma=</span>bw.diggle, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">edge=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">diggle=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>)</span>
+<span id="cb16-32">  </span>
+<span id="cb16-33">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">png</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">paste0</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Drop-off - Edge Correction/dropoff_edge_"</span>,i,<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">".png"</span>), <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">width=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1000</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">height=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">400</span>)</span>
+<span id="cb16-34">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">par</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">mfrow=</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">c</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>,<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>))</span>
+<span id="cb16-35">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(kde1, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">main=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Edge Correction - Default"</span>)</span>
+<span id="cb16-36">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(kde2, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">main=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Edge Correction - Improved"</span>)</span>
+<span id="cb16-37">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">dev.off</span>()</span>
+<span id="cb16-38">}</span></code></pre></div>
+</div>
+</section>
+</section>
+<section id="pick-up-locations---bandwidth-selection" class="level1">
+<h1>Pick-up Locations - Bandwidth Selection</h1>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1">bw_diggle <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">density</span>(pickup_owin, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">sigma=</span>bw.diggle, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">edge=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>)</span>
+<span id="cb17-2"></span>
+<span id="cb17-3">bw_ppl <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">density</span>(pickup_owin, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">sigma=</span>bw.ppl, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">edge=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>)</span>
+<span id="cb17-4"></span>
+<span id="cb17-5">bw_abram <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">densityAdaptiveKernel</span>(pickup_owin, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">edge=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>)</span>
+<span id="cb17-6"></span>
+<span id="cb17-7"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">png</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">paste0</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"pickup_bandwidth.png"</span>), <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">width=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">800</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">height=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">500</span>)</span>
+<span id="cb17-8"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">par</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">mfrow=</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">c</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>,<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>))</span>
+<span id="cb17-9"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(bw_diggle, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">main=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Fixed Bandwidth - bw.diggle"</span>)</span>
+<span id="cb17-10"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(bw_ppl, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">main=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Fixed Bandwidth - bw.ppl"</span>)</span>
+<span id="cb17-11"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(bw_abram, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">main=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Adaptive Bandwidth - bw.abram"</span>)</span>
+<span id="cb17-12"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">dev.off</span>()</span></code></pre></div>
+</div>
+<section id="filter-by-planning-area-2" class="level2">
+<h2 class="anchored" data-anchor-id="filter-by-planning-area-2">Filter by planning area</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1">areas <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">unique</span>(mpsz<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">$</span>REGION_N)</span>
+<span id="cb18-2"></span>
+<span id="cb18-3"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">for</span> (i <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">in</span> areas){</span>
+<span id="cb18-4">  mpsz_filter <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> mpsz <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb18-5">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">filter</span>(REGION_N <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">==</span> i)</span>
+<span id="cb18-6">  </span>
+<span id="cb18-7">  filter_owin <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">as.owin</span>(mpsz_filter)</span>
+<span id="cb18-8">    </span>
+<span id="cb18-9">  filter_ppp <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">=</span> pickup_ppp[filter_owin]</span>
+<span id="cb18-10">  filter_ppp <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">rescale</span>(filter_ppp, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1000</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"km"</span>)</span>
+<span id="cb18-11">    </span>
+<span id="cb18-12">  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Initialize an error flag</span></span>
+<span id="cb18-13">  error_occurred <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">FALSE</span></span>
+<span id="cb18-14">  </span>
+<span id="cb18-15">  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Attempt to calculate kde1</span></span>
+<span id="cb18-16">  kde1 <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">tryCatch</span>({</span>
+<span id="cb18-17">    <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">density</span>(filter_ppp, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">sigma=</span>bw.diggle, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">edge=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>)</span>
+<span id="cb18-18">  }, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">error =</span> <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">function</span>(e) {</span>
+<span id="cb18-19">    <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">cat</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Error in processing kde1 for area"</span>, i, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">": "</span>, e<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">$</span>message, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">\n</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span>
+<span id="cb18-20">    error_occurred <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;&lt;-</span> <span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Update error flag</span></span>
+<span id="cb18-21">    <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">return</span>(<span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">NULL</span>)</span>
+<span id="cb18-22">  })</span>
+<span id="cb18-23">  </span>
+<span id="cb18-24">  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Skip this iteration if an error occurred in kde1</span></span>
+<span id="cb18-25">  <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">if</span> (error_occurred) {</span>
+<span id="cb18-26">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">next</span></span>
+<span id="cb18-27">  }</span>
+<span id="cb18-28">  </span>
+<span id="cb18-29">  kde2 <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">density</span>(filter_ppp, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">sigma=</span>bw.ppl, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">edge=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>)</span>
+<span id="cb18-30">  kde3 <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">densityAdaptiveKernel</span>(filter_ppp, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">edge=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>)</span>
+<span id="cb18-31">  </span>
+<span id="cb18-32">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">png</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">paste0</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Pick-up - Bandwidth/pickup_bw_"</span>,i,<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">".png"</span>), <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">width=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">800</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">height=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">700</span>)</span>
+<span id="cb18-33">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">par</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">mfrow=</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">c</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>,<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>))</span>
+<span id="cb18-34">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(kde1, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">main=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Fixed - bw.diggle"</span>)</span>
+<span id="cb18-35">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(kde2, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">main=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Fixed - bw.ppl"</span>)</span>
+<span id="cb18-36">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(kde3, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">main=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Adaptive - bw.abram"</span>)</span>
+<span id="cb18-37">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">dev.off</span>()</span>
+<span id="cb18-38">}</span></code></pre></div>
+</div>
+</section>
+</section>
+<section id="drop-off-locations---bandwidth-selection" class="level1">
+<h1>Drop-off Locations - Bandwidth Selection</h1>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1">bw_diggle <span class="ot" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
 background-color: null;
@@ -675,26 +1059,7 @@ background-color: null;
 font-style: inherit;">edge=</span><span class="cn" style="color: #8f5902;
 background-color: null;
 font-style: inherit;">TRUE</span>)</span>
-<span id="cb14-8"></span>
-<span id="cb14-9"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># Fixed Bandwidth - LCV</span></span>
-<span id="cb14-10">pickup_ppl <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">density</span>(pickup_owin, <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">sigma=</span>bw.ppl, <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">edge=</span><span class="cn" style="color: #8f5902;
-background-color: null;
-font-style: inherit;">TRUE</span>, <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">kernel=</span><span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"gaussian"</span>)</span>
-<span id="cb14-11">dropoff_ppl <span class="ot" style="color: #003B4F;
+<span id="cb19-2">bw_ppl <span class="ot" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
 background-color: null;
@@ -704,48 +1069,33 @@ font-style: inherit;">sigma=</span>bw.ppl, <span class="at" style="color: #65742
 background-color: null;
 font-style: inherit;">edge=</span><span class="cn" style="color: #8f5902;
 background-color: null;
-font-style: inherit;">TRUE</span>, <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">kernel=</span><span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"gaussian"</span>)</span>
-<span id="cb14-12"></span>
-<span id="cb14-13"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># Adaptive Bandwidth</span></span>
-<span id="cb14-14">pickup_adapt <span class="ot" style="color: #003B4F;
+font-style: inherit;">TRUE</span>)</span>
+<span id="cb19-3">bw_abram <span class="ot" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">adaptive.density</span>(pickup_owin, <span class="at" style="color: #657422;
+font-style: inherit;">densityAdaptiveKernel</span>(dropoff_owin, <span class="at" style="color: #657422;
 background-color: null;
-font-style: inherit;">method=</span><span class="st" style="color: #20794D;
+font-style: inherit;">edge=</span><span class="cn" style="color: #8f5902;
 background-color: null;
-font-style: inherit;">"kernel"</span>)</span>
-<span id="cb14-15">dropoff_adapt <span class="ot" style="color: #003B4F;
+font-style: inherit;">TRUE</span>)</span>
+<span id="cb19-4"></span>
+<span id="cb19-5"><span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+font-style: inherit;">png</span>(<span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">adaptive.density</span>(dropoff_owin, <span class="at" style="color: #657422;
+font-style: inherit;">paste0</span>(<span class="st" style="color: #20794D;
 background-color: null;
-font-style: inherit;">method=</span><span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"kernel"</span>)</span>
-<span id="cb14-16"></span>
-<span id="cb14-17"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">png</span>(<span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"pickup_adapt.png"</span>, <span class="at" style="color: #657422;
+font-style: inherit;">"dropoff_bandwidth.png"</span>), <span class="at" style="color: #657422;
 background-color: null;
 font-style: inherit;">width=</span><span class="dv" style="color: #AD0000;
 background-color: null;
-font-style: inherit;">1000</span>, <span class="at" style="color: #657422;
+font-style: inherit;">800</span>, <span class="at" style="color: #657422;
 background-color: null;
 font-style: inherit;">height=</span><span class="dv" style="color: #AD0000;
 background-color: null;
-font-style: inherit;">700</span>)</span>
-<span id="cb14-18"><span class="fu" style="color: #4758AB;
+font-style: inherit;">500</span>)</span>
+<span id="cb19-6"><span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">par</span>(<span class="at" style="color: #657422;
 background-color: null;
@@ -756,87 +1106,236 @@ background-color: null;
 font-style: inherit;">2</span>,<span class="dv" style="color: #AD0000;
 background-color: null;
 font-style: inherit;">2</span>))</span>
-<span id="cb14-19"><span class="fu" style="color: #4758AB;
+<span id="cb19-7"><span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">plot</span>(pickup_kde, <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">main=</span><span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"Least Squares Cross Validation"</span>)</span>
-<span id="cb14-20"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">plot</span>(pickup_ppl, <span class="at" style="color: #657422;
+font-style: inherit;">plot</span>(bw_diggle, <span class="at" style="color: #657422;
 background-color: null;
 font-style: inherit;">main=</span><span class="st" style="color: #20794D;
 background-color: null;
-font-style: inherit;">"Likelihood Cross Validation"</span>)</span>
-<span id="cb14-21"><span class="fu" style="color: #4758AB;
+font-style: inherit;">"Fixed Bandwidth - bw.diggle"</span>)</span>
+<span id="cb19-8"><span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">plot</span>(pickup_adapt, <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">main=</span><span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"Adaptive Bandwidth Selection"</span>)</span>
-<span id="cb14-22"></span>
-<span id="cb14-23"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">png</span>(<span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"dropoff_adapt.png"</span>, <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">width=</span><span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">1000</span>, <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">height=</span><span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">700</span>)</span>
-<span id="cb14-24"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">par</span>(<span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">mfrow=</span><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">c</span>(<span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">2</span>,<span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">2</span>))</span>
-<span id="cb14-25"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">plot</span>(dropoff_kde, <span class="at" style="color: #657422;
+font-style: inherit;">plot</span>(bw_ppl, <span class="at" style="color: #657422;
 background-color: null;
 font-style: inherit;">main=</span><span class="st" style="color: #20794D;
 background-color: null;
-font-style: inherit;">"Least Squares Cross Validation"</span>)</span>
-<span id="cb14-26"><span class="fu" style="color: #4758AB;
+font-style: inherit;">"Fixed Bandwidth - bw.ppl"</span>)</span>
+<span id="cb19-9"><span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">plot</span>(dropoff_ppl, <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">main=</span><span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"Likelihood Cross Validation"</span>)</span>
-<span id="cb14-27"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">plot</span>(dropoff_adapt, <span class="at" style="color: #657422;
+font-style: inherit;">plot</span>(bw_abram, <span class="at" style="color: #657422;
 background-color: null;
 font-style: inherit;">main=</span><span class="st" style="color: #20794D;
 background-color: null;
-font-style: inherit;">"Adaptive Bandwidth Selection"</span>)</span></code></pre></div>
+font-style: inherit;">"Adaptive Bandwidth - bw.abram"</span>)</span>
+<span id="cb19-10"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">dev.off</span>()</span></code></pre></div>
 </div>
-<p><img src="https://capstonejourney.netlify.app/Analysis/KDE/pickup_adapt.png" class="img-fluid"></p>
-<p><img src="https://capstonejourney.netlify.app/Analysis/KDE/dropoff_adapt.png" class="img-fluid"></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1">areas <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">unique</span>(mpsz<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">$</span>REGION_N)</span>
+<span id="cb20-2"></span>
+<span id="cb20-3"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">#areas &lt;- "NOVENA"</span></span>
+<span id="cb20-4"></span>
+<span id="cb20-5"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">for</span> (i <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">in</span> areas){</span>
+<span id="cb20-6">  mpsz_filter <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> mpsz <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb20-7">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">filter</span>(REGION_N <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">==</span> i)</span>
+<span id="cb20-8">  </span>
+<span id="cb20-9">  filter_owin <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">as.owin</span>(mpsz_filter)</span>
+<span id="cb20-10">    </span>
+<span id="cb20-11">  filter_ppp <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">=</span> dropoff_ppp[filter_owin]</span>
+<span id="cb20-12">  filter_ppp <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">rescale</span>(filter_ppp, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1000</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"km"</span>)</span>
+<span id="cb20-13">    </span>
+<span id="cb20-14">  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Initialize an error flag</span></span>
+<span id="cb20-15">  error_occurred <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">FALSE</span></span>
+<span id="cb20-16">  </span>
+<span id="cb20-17">  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Attempt to calculate kde1</span></span>
+<span id="cb20-18">  kde1 <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">tryCatch</span>({</span>
+<span id="cb20-19">    <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">density</span>(filter_ppp, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">sigma=</span>bw.diggle, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">edge=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>)</span>
+<span id="cb20-20">  }, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">error =</span> <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">function</span>(e) {</span>
+<span id="cb20-21">    <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">cat</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Error in processing kde1 for area"</span>, i, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">": "</span>, e<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">$</span>message, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">\n</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span>
+<span id="cb20-22">    error_occurred <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;&lt;-</span> <span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Update error flag</span></span>
+<span id="cb20-23">    <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">return</span>(<span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">NULL</span>)</span>
+<span id="cb20-24">  })</span>
+<span id="cb20-25">  </span>
+<span id="cb20-26">  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Skip this iteration if an error occurred in kde1</span></span>
+<span id="cb20-27">  <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">if</span> (error_occurred) {</span>
+<span id="cb20-28">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">next</span></span>
+<span id="cb20-29">  }</span>
+<span id="cb20-30">  </span>
+<span id="cb20-31">  kde2 <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">density</span>(filter_ppp, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">sigma=</span>bw.ppl, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">edge=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>)</span>
+<span id="cb20-32">  kde3 <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">densityAdaptiveKernel</span>(filter_ppp, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">edge=</span><span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">TRUE</span>)</span>
+<span id="cb20-33">  </span>
+<span id="cb20-34">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">png</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">paste0</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Drop-off - Bandwidth/dropoff_bw_"</span>,i,<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">".png"</span>), <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">width=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">800</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">height=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">500</span>)</span>
+<span id="cb20-35">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">par</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">mfrow=</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">c</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>,<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>))</span>
+<span id="cb20-36">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(kde1, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">main=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Fixed - bw.diggle"</span>)</span>
+<span id="cb20-37">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(kde2, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">main=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Fixed - bw.ppl"</span>)</span>
+<span id="cb20-38">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(kde3, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">main=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Adaptive - bw.abram"</span>)</span>
+<span id="cb20-39">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">dev.off</span>()</span>
+<span id="cb20-40">}</span></code></pre></div>
+</div>
 
 
 </section>
 
  ]]></description>
   <guid>https://capstonejourney.netlify.app/Analysis/KDE/KDE_spatstat.html</guid>
-  <pubDate>Tue, 23 Apr 2024 03:50:01 GMT</pubDate>
+  <pubDate>Sat, 18 May 2024 13:56:37 GMT</pubDate>
 </item>
 <item>
-  <title>Temporal KDE Analysis using sparr package</title>
-  <link>https://capstonejourney.netlify.app/Analysis/KDE/TKDE_sparr.html</link>
+  <title>TKDE Analysis using ks package</title>
+  <link>https://capstonejourney.netlify.app/Analysis/KDE/TKDE_ks.html</link>
   <description><![CDATA[ 
 
 
@@ -849,15 +1348,14 @@ font-style: inherit;">"Adaptive Bandwidth Selection"</span>)</span></code></pre>
 <ul>
 <li>sf package is used for importing, managing, and processing geospatial data.</li>
 <li>tidyverse package for aspatial data wrangling.</li>
-<li>spatstat package to perform 1st-order spatial point patterns analysis and derive kernel density estimation (KDE) layer.</li>
-<li>tmap package is used to visualize geospatial data on maps.</li>
+<li>ks package to perform multivariate kernel density estimation (KDE).</li>
 </ul>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1">pacman<span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">::</span><span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">p_load</span>(sf, tidyverse, spatstat, tmap, sparr, lubridate)</span></code></pre></div>
+font-style: inherit;">p_load</span>(sf, tidyverse, ks, lubridate, rgl)</span></code></pre></div>
 </div>
 <p>In the code chunk below, the <a href="DataPrep.qmd">cleaned data files</a> are loaded into R.</p>
 <div class="cell">
@@ -886,303 +1384,184 @@ font-style: inherit;">st_transform</span>(<span class="at" style="color: #657422
 background-color: null;
 font-style: inherit;">crs =</span> <span class="dv" style="color: #AD0000;
 background-color: null;
-font-style: inherit;">3414</span>)</span></code></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>Reading layer `MPSZ-2019' from data source 
-  `C:\magdalenecjw\Capstone\Analysis\data\geospatial' using driver `ESRI Shapefile'
-Simple feature collection with 332 features and 6 fields
-Geometry type: MULTIPOLYGON
-Dimension:     XY
-Bounding box:  xmin: 103.6057 ymin: 1.158699 xmax: 104.0885 ymax: 1.470775
-Geodetic CRS:  WGS 84</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><span class="co" style="color: #5E5E5E;
+font-style: inherit;">3414</span>) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb2-5">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">summarize</span>()</span>
+<span id="cb2-6"></span>
+<span id="cb2-7"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;"># Load rds file</span></span>
-<span id="cb4-2">pickup_sf <span class="ot" style="color: #003B4F;
+<span id="cb2-8">pickup_loc <span class="ot" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">st_as_sf</span>(<span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">read_rds</span>(<span class="st" style="color: #20794D;
 background-color: null;
-font-style: inherit;">"../data/rds/pickup_sf.rds"</span>)) <span class="sc" style="color: #5E5E5E;
+font-style: inherit;">"../data/rds/pickup_loc.rds"</span>) <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">%&gt;%</span></span>
-<span id="cb4-3">  <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">st_intersection</span>(mpsz) <span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">%&gt;%</span></span>
-<span id="cb4-4">  <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">filter</span>(PLN_AREA_N <span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">==</span> <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"ANG MO KIO"</span>)</span></code></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: attribute variables are assumed to be spatially constant throughout all
-geometries</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb6" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1">pickup_times <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">as.list</span>(<span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">as.numeric</span>(pickup_sf<span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">$</span>pingtimestamp))</span>
-<span id="cb6-2"></span>
-<span id="cb6-3">dropoff_sf <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">st_as_sf</span>(<span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">read_rds</span>(<span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"../data/rds/dropoff_sf.rds"</span>))<span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">%&gt;%</span></span>
-<span id="cb6-4">  <span class="fu" style="color: #4758AB;
+<span id="cb2-9">  <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">mutate</span>(<span class="at" style="color: #657422;
 background-color: null;
-font-style: inherit;">timestamp =</span> <span class="fu" style="color: #4758AB;
+font-style: inherit;">pingtimestamp =</span> <span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">as.numeric</span>(pingtimestamp)) <span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">%&gt;%</span></span>
-<span id="cb6-5">  <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">select</span>(timestamp, geometry)</span></code></pre></div>
-</div>
-</section>
-<section id="convert-pickup-and-dropoff-location-sf-dataframes-into-spatstats-ppp-object-format" class="level1">
-<h1>Convert Pickup and Dropoff location sf dataframes into spatstat’s ppp object format</h1>
-<p>Convert the sf dataframe to a ppp object using <code>as.ppp()</code> function from the spatstat package. The result is a marked planar point pattern. To change a marked planar point pattern to just a planar point pattern, simply remove the marks associated with each point using <code>marks(pickup_ppp) &lt;- NULL</code>.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb7" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1">pickup_ppp <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">as.ppp</span>(pickup_sf)</span></code></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning in as.ppp.sf(pickup_sf): only first attribute column is used for marks</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb9" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">plot</span>(pickup_ppp)</span></code></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning in default.charmap(ntypes, chars): Too many types to display every type
-as a different character</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: Only 10 out of 606 symbols are shown in the symbol map</code></pre>
-</div>
-<div class="cell-output-display">
-<p><img src="https://capstonejourney.netlify.app/Analysis/KDE/TKDE_sparr_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid" width="672"></p>
-</div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb12" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1">dropoff_ppp <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">as.ppp</span>(dropoff_sf)</span>
-<span id="cb12-2"></span>
-<span id="cb12-3"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">plot</span>(dropoff_ppp)</span></code></pre></div>
-<div class="cell-output-display">
-<p><img src="https://capstonejourney.netlify.app/Analysis/KDE/TKDE_sparr_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
-</div>
-</div>
-</section>
-<section id="create-observational-window-owin" class="level1">
-<h1>Create observational window (owin)</h1>
-<p>When analysing spatial point patterns, it is a good practice to confine the analysis with a geographical area like Singapore boundary. In spatstat, an object called owin is specially designed to represent this polygonal region. The code chunk below is used to create a border of Singapore’s land area and convert it into an owin object of spatstat package using <code>as.owin()</code>.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb13" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># Create border of Singapore's land area</span></span>
-<span id="cb13-2">mpsz_border <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">st_cast</span>(mpsz <span class="sc" style="color: #5E5E5E;
+font-style: inherit;">as.integer</span>(pingtimestamp)) <span class="sc" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">%&gt;%</span></span>
-<span id="cb13-3">                         <span class="fu" style="color: #4758AB;
+<span id="cb2-10">  <span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">summarize</span>(), <span class="st" style="color: #20794D;
+font-style: inherit;">select</span>(<span class="sc" style="color: #5E5E5E;
 background-color: null;
-font-style: inherit;">"POLYGON"</span>)</span>
-<span id="cb13-4"></span>
-<span id="cb13-5"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># Convert the resulting sf object to an owin object</span></span>
-<span id="cb13-6">mpsz_owin <span class="ot" style="color: #003B4F;
+font-style: inherit;">-</span>trj_id)</span>
+<span id="cb2-11">dropoff_loc <span class="ot" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">as.owin</span>(mpsz_border)</span>
-<span id="cb13-7"></span>
-<span id="cb13-8"><span class="fu" style="color: #4758AB;
+font-style: inherit;">read_rds</span>(<span class="st" style="color: #20794D;
 background-color: null;
-font-style: inherit;">plot</span>(mpsz_owin)</span></code></pre></div>
-<div class="cell-output-display">
-<p><img src="https://capstonejourney.netlify.app/Analysis/KDE/TKDE_sparr_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
-</div>
+font-style: inherit;">"../data/rds/dropoff_loc.rds"</span>) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb2-12">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">mutate</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">pingtimestamp =</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">as.integer</span>(pingtimestamp)) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb2-13">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">select</span>(<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span>trj_id)</span>
+<span id="cb2-14">pickup_sf <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">st_as_sf</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">read_rds</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"../data/rds/pickup_sf.rds"</span>))</span>
+<span id="cb2-15">dropoff_sf <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">st_as_sf</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">read_rds</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"../data/rds/dropoff_sf.rds"</span>))</span></code></pre></div>
 </div>
 </section>
-<section id="combine-point-events-object-and-owin-object" class="level1">
-<h1>Combine point events object and owin object</h1>
-<p>In the code chunks below, pick-up and drop-off events located within the observational window are extracted.</p>
+<section id="without-normalization" class="level1">
+<h1>Without normalization</h1>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb14" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1">pickup_owin <span class="ot" style="color: #003B4F;
+<div class="sourceCode cell-code" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1">kde_ks_original <span class="ot" style="color: #003B4F;
 background-color: null;
-font-style: inherit;">=</span> pickup_ppp[mpsz_owin]</span>
-<span id="cb14-2"></span>
-<span id="cb14-3"><span class="fu" style="color: #4758AB;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">plot</span>(pickup_owin)</span></code></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning in default.charmap(ntypes, chars): Too many types to display every type
-as a different character</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: Only 10 out of 606 symbols are shown in the symbol map</code></pre>
-</div>
-<div class="cell-output-display">
-<p><img src="https://capstonejourney.netlify.app/Analysis/KDE/TKDE_sparr_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
-</div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb17" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1">dropoff_owin <span class="ot" style="color: #003B4F;
+font-style: inherit;">kde</span>(pickup_loc, <span class="at" style="color: #657422;
 background-color: null;
-font-style: inherit;">=</span> dropoff_ppp[mpsz_owin]</span>
-<span id="cb17-2"></span>
-<span id="cb17-3"><span class="fu" style="color: #4758AB;
+font-style: inherit;">H =</span> <span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">plot</span>(dropoff_owin)</span></code></pre></div>
-<div class="cell-output-display">
-<p><img src="https://capstonejourney.netlify.app/Analysis/KDE/TKDE_sparr_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid" width="672"></p>
-</div>
+font-style: inherit;">Hlscv</span>(pickup_loc))</span>
+<span id="cb3-2"></span>
+<span id="cb3-3"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">summary</span>(kde_ks_original<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">$</span>estimate)</span></code></pre></div>
 </div>
 </section>
-<section id="kde-analysis-using-cross-validation-method" class="level1">
-<h1>KDE Analysis using Cross-validation method</h1>
-<p>The code chunk below computes a kernel density by using the following configurations of <code>density()</code> function of spatstat:</p>
-<ul>
-<li><code>bw.ppl()</code> uses cross-validation to select a smoothing bandwidth for the kernel density estimation.</li>
-<li>The intensity estimate is corrected for edge effect bias i.e.&nbsp;<code>edge=TRUE</code> (default is <code>FALSE</code>).</li>
-</ul>
-<p><code>rescale()</code> function is used to covert the unit of measurement from meter to kilometer.</p>
+<section id="with-normalization" class="level1">
+<h1>With normalization</h1>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb18" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1">pickup_owin <span class="ot" style="color: #003B4F;
+<div class="sourceCode cell-code" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Normalize the data to the range [0, 1]</span></span>
+<span id="cb4-2">normalize <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">function</span>(x) {</span>
+<span id="cb4-3">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">return</span> ((x <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">min</span>(x)) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span> (<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">max</span>(x) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">min</span>(x)))</span>
+<span id="cb4-4">}</span>
+<span id="cb4-5"></span>
+<span id="cb4-6">pickup_norm <span class="ot" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">rescale</span>(pickup_owin, <span class="dv" style="color: #AD0000;
+font-style: inherit;">as.data.frame</span>(<span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">1000</span>, <span class="st" style="color: #20794D;
+font-style: inherit;">lapply</span>(pickup_loc, normalize))</span>
+<span id="cb4-7"></span>
+<span id="cb4-8"><span class="co" style="color: #5E5E5E;
 background-color: null;
-font-style: inherit;">"km"</span>)</span>
-<span id="cb18-2">dropoff_owin <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">rescale</span>(dropoff_owin, <span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">1000</span>, <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"km"</span>)</span>
-<span id="cb18-3"></span>
-<span id="cb18-4"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">marks</span>(pickup_owin) <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">&lt;-</span> <span class="cn" style="color: #8f5902;
-background-color: null;
-font-style: inherit;">NULL</span></span>
-<span id="cb18-5"></span>
-<span id="cb18-6">bw <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">=</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">bw.diggle</span>(pickup_owin)</span>
-<span id="cb18-7"></span>
-<span id="cb18-8">pickup_tkde <span class="ot" style="color: #003B4F;
+font-style: inherit;"># Store the original ranges for scaling back</span></span>
+<span id="cb4-9">range_x <span class="ot" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">spattemp.density</span>(pickup_owin, <span class="at" style="color: #657422;
+font-style: inherit;">range</span>(pickup_loc<span class="sc" style="color: #5E5E5E;
 background-color: null;
-font-style: inherit;">h =</span> bw, <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">tt =</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">as.numeric</span>(pickup_times))</span>
-<span id="cb18-9"></span>
-<span id="cb18-10">dropoff_kde <span class="ot" style="color: #003B4F;
+font-style: inherit;">$</span>pickup_lng)</span>
+<span id="cb4-10">range_y <span class="ot" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">density</span>(dropoff_owin, <span class="at" style="color: #657422;
+font-style: inherit;">range</span>(pickup_loc<span class="sc" style="color: #5E5E5E;
 background-color: null;
-font-style: inherit;">sigma=</span>bw.diggle, <span class="at" style="color: #657422;
+font-style: inherit;">$</span>pickup_lng)</span>
+<span id="cb4-11">range_time <span class="ot" style="color: #003B4F;
 background-color: null;
-font-style: inherit;">edge=</span><span class="cn" style="color: #8f5902;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">TRUE</span>)</span>
-<span id="cb18-11"></span>
-<span id="cb18-12"><span class="fu" style="color: #4758AB;
+font-style: inherit;">range</span>(pickup_loc<span class="sc" style="color: #5E5E5E;
 background-color: null;
-font-style: inherit;">png</span>(<span class="st" style="color: #20794D;
+font-style: inherit;">$</span>pingtimestamp)</span>
+<span id="cb4-12"></span>
+<span id="cb4-13">kde_ks <span class="ot" style="color: #003B4F;
 background-color: null;
-font-style: inherit;">"pickup_kde.png"</span>, <span class="at" style="color: #657422;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">width=</span><span class="dv" style="color: #AD0000;
+font-style: inherit;">kde</span>(pickup_norm, <span class="at" style="color: #657422;
 background-color: null;
-font-style: inherit;">600</span>, <span class="at" style="color: #657422;
+font-style: inherit;">H =</span> <span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">height=</span><span class="dv" style="color: #AD0000;
+font-style: inherit;">Hlscv</span>(pickup_norm))</span>
+<span id="cb4-14"></span>
+<span id="cb4-15"><span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">500</span>)</span>
-<span id="cb18-13"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">plot</span>(pickup_kde)</span>
-<span id="cb18-14"></span>
-<span id="cb18-15"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">png</span>(<span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"dropoff_kde.png"</span>, <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">width=</span><span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">600</span>, <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">height=</span><span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">500</span>)</span>
-<span id="cb18-16"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">plot</span>(dropoff_kde)</span></code></pre></div>
+font-style: inherit;">plot</span>(kde_ks)</span></code></pre></div>
 </div>
-<p><img src="https://capstonejourney.netlify.app/Analysis/KDE/pickup_kde.png" class="img-fluid"></p>
-<p><img src="https://capstonejourney.netlify.app/Analysis/KDE/dropoff_kde.png" class="img-fluid"></p>
 
 
 </section>
 
  ]]></description>
-  <guid>https://capstonejourney.netlify.app/Analysis/KDE/TKDE_sparr.html</guid>
-  <pubDate>Tue, 23 Apr 2024 03:50:01 GMT</pubDate>
+  <guid>https://capstonejourney.netlify.app/Analysis/KDE/TKDE_ks.html</guid>
+  <pubDate>Sat, 18 May 2024 13:56:37 GMT</pubDate>
 </item>
 </channel>
 </rss>

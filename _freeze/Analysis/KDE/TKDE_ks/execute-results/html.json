@@ -1,0 +1,14 @@
+{
+  "hash": "8b3ba2cb3d1246b3b716f5234afb488a",
+  "result": {
+    "markdown": "---\npagetitle: KDE Analysis | Capstone\ntitle: TKDE Analysis using ks package\n---\n\n\n![](../../Images/3.png){width=\"500\"}\n\n# Getting Started\n\nThe code chunk below uses `p_load()` function of pacman package to check if the required packages have been installed on the computer. If they are, the packages will be launched.\n\nThe packages used are:\n\n-   sf package is used for importing, managing, and processing geospatial data.\n-   tidyverse package for aspatial data wrangling.\n-   ks package to perform multivariate kernel density estimation (KDE).\n\n\n::: {.cell}\n\n```{.r .cell-code}\npacman::p_load(sf, tidyverse, ks, lubridate, rgl)\n```\n:::\n\n\nIn the code chunk below, the [cleaned data files](DataPrep.qmd) are loaded into R.\n\n\n::: {.cell}\n\n```{.r .cell-code}\n# Load base map\nmpsz = st_read(dsn = \"../data/geospatial\", \n               layer = \"MPSZ-2019\") %>%\n  st_transform(crs = 3414) %>%\n  summarize()\n\n# Load rds file\npickup_loc <- read_rds(\"../data/rds/pickup_loc.rds\") %>%\n  mutate(pingtimestamp = as.integer(pingtimestamp)) %>%\n  select(-trj_id)\ndropoff_loc <- read_rds(\"../data/rds/dropoff_loc.rds\") %>%\n  mutate(pingtimestamp = as.integer(pingtimestamp)) %>%\n  select(-trj_id)\npickup_sf <- st_as_sf(read_rds(\"../data/rds/pickup_sf.rds\"))\ndropoff_sf <- st_as_sf(read_rds(\"../data/rds/dropoff_sf.rds\"))\n```\n:::\n\n# Without normalization\n\n\n::: {.cell}\n\n```{.r .cell-code}\nkde_ks_original <- kde(pickup_loc, H = Hlscv(pickup_loc))\n\nsummary(kde_ks_original$estimate)\n```\n:::\n\n\n# With normalization\n\n\n::: {.cell}\n\n```{.r .cell-code}\n# Normalize the data to the range [0, 1]\nnormalize <- function(x) {\n  return ((x - min(x)) / (max(x) - min(x)))\n}\n\npickup_norm <- as.data.frame(lapply(pickup_loc, normalize))\n\n# Store the original ranges for scaling back\nrange_x <- range(pickup_loc$pickup_lng)\nrange_y <- range(pickup_loc$pickup_lng)\nrange_time <- range(pickup_loc$pingtimestamp)\n\nkde_ks <- kde(pickup_norm, H = Hlscv(pickup_norm))\n\nplot(kde_ks)\n```\n:::",
+    "supporting": [],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}
