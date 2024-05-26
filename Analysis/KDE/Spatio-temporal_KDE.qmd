@@ -1,0 +1,118 @@
+---
+title: "Spatio-temporal KDE"
+format: html
+editor: visual
+---
+
+## Loading R packages
+
+```{r}
+pacman::p_load(tidyverse, sf, spatstat, sparr, lubridate)
+```
+
+## Data Preparation
+
+Code chunk below is used import mpsz.rds into RStudio and then to extract Ang Mo Kio planning area boundary from *mpsz* sf data.frame.
+
+```{r}
+mpsz_am <- read_rds("../data/rds/mpsz.rds") %>%
+  filter(PLN_AREA_C == "AM")
+```
+
+Next, we will import the *origin_sf.rds* into RStudio
+
+```{r}
+origin_sf <- read_rds("../data/rds/origin_sf.rds")
+```
+
+The code below is used to extract grab trips originated from Ang Mo Kio planning area.
+
+```{r}
+origin_am <- st_intersection(origin_sf, mpsz_am)
+```
+
+Because **ppp** object only accept numerical or character as mark. The code chunk below is used to convert data type of *starttime* to numeric.
+
+```{r}
+origin_am$tt <- as.numeric(origin_am$starttime)
+```
+
+The code chunk below is used to remove the unwanted fields from *origin_am* sf data.frame. This is because `as.ppp()` only need the mark field and geometry field from the input sf data.frame.
+
+```{r}
+origin_am <- origin_am %>%
+  select(tt)
+```
+
+### Creating ppp
+
+The code chunk below is used to derive a **ppp** object called *origin_am_ppp* from *origin_am sf* data.frame.
+
+```{r}
+origin_am_ppp <- as.ppp(origin_am)
+origin_am_ppp
+```
+
+The code chunk below is used to check the output is in the correct object class.
+
+```{r}
+summary(origin_am_ppp)
+```
+
+Next, we will check if there are duplicated point events by using the code chunk below.
+
+```{r}
+any(duplicated(origin_am_ppp))
+```
+
+### Including Owin object
+
+Next, `as.owin()` is used to convert *mpsz_am* into an **owin** object.
+
+```{r}
+am_owin <- as.owin(mpsz_am)
+```
+
+Next, `class()` is used to confirm if the output is indded an owin object.
+
+```{r}
+class(am_owin)
+```
+
+The code chunk below is used to combine *origin_am_ppp* and *am_owin* objects into one.
+
+```{r}
+origin_am_ppp <- origin_am_ppp[am_owin]
+summary(origin_am_ppp)
+```
+
+As a good practice, `plot()` is used to plot *oringin_am_ppp* so that we can examine the correctness of the output object.
+
+```{r}
+plot(origin_am_ppp)
+```
+
+## Computing Spatio-temporal KDE
+
+In the code chunk below, [`spattemp.density()`](https://tilmandavies.github.io/sparr/reference/spattemp.density.html) of **sparr** package is used to compute the spatial-temporal KDE by using origin_am_ppp as the input.
+
+```{r}
+kde_origin_am <- spattemp.density(origin_am_ppp,
+                                  tres=128)
+summary(kde_origin_am)
+```
+
+### Plotting the spatio-temporal KDE object
+
+```{r}
+tims <- c(1555000000,1555100000,1555200000,
+          1555300000,1555400000,1555500000,
+          1555600000,1555700000)
+par(mfcol=c(3,3))
+for(i in tims){ 
+  plot(kde_origin_am, i, 
+       override.par=FALSE, 
+       fix.range=TRUE, 
+       main=paste("KDE at time", as_datetime(i)))
+}
+```

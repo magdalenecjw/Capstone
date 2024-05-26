@@ -1,0 +1,245 @@
+---
+pagetitle: KDE Analysis | Capstone
+title: Temporal KDE Analysis using sparr package
+---
+
+# Getting Started
+
+The code chunk below uses `p_load()` function of pacman package to check if the required packages have been installed on the computer. If they are, the packages will be launched.
+
+The packages used are:
+
+-   sf package is used for importing, managing, and processing geospatial data.
+-   tidyverse package for aspatial data wrangling.
+-   spatstat package to perform 1st-order spatial point patterns analysis and derive kernel density estimation (KDE) layer.
+-   tmap package is used to visualize geospatial data on maps.
+
+```{r}
+options(scipen = 999999)
+
+pacman::p_load(sf, tidyverse, spatstat, tmap, sparr, lubridate, magick)
+```
+
+In the code chunk below, the [cleaned data files](DataPrep.qmd) are loaded into R.
+
+```{r}
+# Load base map
+mpsz = st_read(dsn = "../data/geospatial", 
+               layer = "MPSZ-2019") %>%
+  st_transform(crs = 3414)
+
+# Load rds file
+pickup_sf <- st_as_sf(read_rds("../data/rds/pickup_sf.rds")) %>%
+  st_intersection(mpsz) %>%
+  mutate(pingtimestamp = as.numeric(pingtimestamp)) %>%
+  select(pingtimestamp)
+
+dropoff_sf <- st_as_sf(read_rds("../data/rds/dropoff_sf.rds")) %>%
+  st_intersection(mpsz) %>%
+  mutate(pingtimestamp = as.numeric(pingtimestamp)) %>%
+  select(pingtimestamp)
+```
+
+# Convert Pickup and Dropoff location sf dataframes into spatstat’s ppp object format
+
+Convert the sf dataframe to a ppp object using `as.ppp()` function from the spatstat package. The result is a marked planar point pattern. To change a marked planar point pattern to just a planar point pattern, simply remove the marks associated with each point using `marks(pickup_ppp) <- NULL`.
+
+```{r}
+pickup_ppp <- as.ppp(pickup_sf)
+
+plot(pickup_ppp)
+```
+
+```{r}
+dropoff_ppp <- as.ppp(dropoff_sf)
+
+plot(dropoff_ppp)
+```
+
+# Create observational window (owin)
+
+When analysing spatial point patterns, it is a good practice to confine the analysis with a geographical area like Singapore boundary. In spatstat, an object called owin is specially designed to represent this polygonal region. The code chunk below is used to create a border of Singapore's land area and convert it into an owin object of spatstat package using `as.owin()`.
+
+```{r}
+# Create border of Singapore's land area
+mpsz_border <- st_cast(mpsz)
+
+# Convert the resulting sf object to an owin object
+mpsz_owin <- as.owin(mpsz_border)
+
+plot(mpsz_owin)
+```
+
+# Combine point events object and owin object
+
+In the code chunks below, pick-up and drop-off events located within the observational window are extracted.
+
+```{r}
+pickup_owin = pickup_ppp[mpsz_owin]
+
+plot(pickup_owin)
+```
+
+```{r}
+dropoff_owin = dropoff_ppp[mpsz_owin]
+
+plot(dropoff_owin)
+```
+
+# TKDE for Pick-up locations using adaptive bandwidth
+
+```{r}
+#| eval: false
+pickup_scaled <- rescale(pickup_owin, 1000, "km")
+
+bw = bw.abram(pickup_scaled)
+
+pickup_tkde <- spattemp.density(pickup_scaled, h = bw, tres = 128)
+```
+
+## Plot gif
+
+```{r}
+#| eval: false
+summary(as_datetime(pickup_scaled$marks))
+```
+
+```{r}
+#| eval: false
+# Define your dates (assuming dates is a vector of date values)
+dates <- as.numeric(seq(min(as_datetime(pickup_scaled$marks)), 
+                        max(as_datetime(pickup_scaled$marks)), 
+                        by = "3 hours"))
+
+# Create a temporary directory to save the images
+dir.create("west_pickup")
+
+# Generate and save each plot
+for (i in dates) {
+  # Define the file name
+  file_name <- paste0("west_pickup/plot_", as.character(i), ".png")
+  
+  # Open a PNG device
+  png(filename = file_name)
+  
+  # Get the day of the week
+  day_of_week <- wday(as_datetime(i), label = TRUE, abbr = TRUE, week_start = 1)
+  
+  # Create the plot
+  plot(pickup_tkde, i, 
+       override.par = FALSE, 
+       fix.range = TRUE, 
+       main = paste("KDE at time", day_of_week, as_datetime(i)))
+  
+  # Close the PNG device
+  dev.off()
+}
+
+```
+
+```{r}
+#| eval: false
+# List the image files
+image_files <- list.files("west_pickup", full.names = TRUE, pattern = "*.png")
+
+# Read the images into a list
+image_list <- lapply(image_files, image_read)
+
+# Combine the images into an animation
+animation <- image_animate(image_join(image_list), fps = 2)
+
+# Save the animation as a GIF
+image_write(animation, "west_pickup.gif")
+
+```
+
+## Plot spatial and temporal outputs
+
+```{r}
+#| eval: false
+png(paste0("Spatial margin - Pick-up.png"), width=500, height=350)
+plot(pickup_tkde$spatial.z,box=FALSE,main="Spatial margin\n Pick-up")
+dev.off()
+png(paste0("Temporal margin - Pick-up.png"), width=750, height=500)
+plot(pickup_tkde$temporal.z,xlim=pickup_tkde$tlim,xaxs="i",main="Temporal margin\n Pick-up")
+dev.off()
+```
+
+# TKDE for Drop-off locations using adaptive bandwidth
+
+```{r}
+#| eval: false
+dropoff_scaled <- rescale(dropoff_owin, 1000, "km")
+
+bw = bw.abram(dropoff_scaled)
+
+dropoff_tkde <- spattemp.density(dropoff_scaled, h = bw, tres = 128)
+```
+
+## Plot gif
+
+```{r}
+#| eval: false
+summary(as_datetime(dropoff_scaled$marks))
+```
+
+```{r}
+#| eval: false
+# Define your dates (assuming dates is a vector of date values)
+dates <- as.numeric(seq(min(as_datetime(dropoff_scaled$marks)), 
+                        max(as_datetime(dropoff_scaled$marks)), 
+                        by = "3 hours"))
+
+# Create a temporary directory to save the images
+dir.create("west_dropoff")
+
+# Generate and save each plot
+for (i in dates) {
+  # Define the file name
+  file_name <- paste0("west_dropoff/plot_", as.character(i), ".png")
+  
+  # Open a PNG device
+  png(filename = file_name)
+  
+  # Get the day of the week
+  day_of_week <- wday(as_datetime(i), label = TRUE, abbr = TRUE, week_start = 1)
+  
+  # Create the plot
+  plot(dropoff_tkde, i, 
+       override.par = FALSE, 
+       fix.range = TRUE, 
+       main = paste("KDE at time", day_of_week, as_datetime(i)))
+  
+  # Close the PNG device
+  dev.off()
+}
+
+```
+
+```{r}
+#| eval: false
+# List the image files
+image_files <- list.files("west_dropoff", full.names = TRUE, pattern = "*.png")
+
+# Read the images into a list
+image_list <- lapply(image_files, image_read)
+
+# Combine the images into an animation
+animation <- image_animate(image_join(image_list), fps = 2)
+
+# Save the animation as a GIF
+image_write(animation, "west_dropoff.gif")
+
+```
+
+## Plot spatial and temporal outputs
+
+```{r}
+#| eval: false
+png(paste0("Spatial margin - Drop-off.png"), width=500, height=350)
+plot(dropoff_tkde$spatial.z,box=FALSE,main="Spatial margin\n Drop-off")
+dev.off()
+png(paste0("Temporal margin - Drop-off.png"), width=750, height=500)
+plot(dropoff_tkde$temporal.z,xlim=dropoff_tkde$tlim,xaxs="i",main="Temporal margin\n Drop-off")
+dev.off()
+```

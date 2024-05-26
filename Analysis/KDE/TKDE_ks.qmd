@@ -16,13 +16,14 @@ The packages used are:
 -   ks package to perform multivariate kernel density estimation (KDE).
 
 ```{r}
+options(scipen = 999999)
+
 pacman::p_load(sf, tidyverse, ks, lubridate, rgl)
 ```
 
 In the code chunk below, the [cleaned data files](DataPrep.qmd) are loaded into R.
 
 ```{r}
-#| eval: false
 # Load base map
 mpsz = st_read(dsn = "../data/geospatial", 
                layer = "MPSZ-2019") %>%
@@ -31,19 +32,24 @@ mpsz = st_read(dsn = "../data/geospatial",
 
 # Load rds file
 pickup_loc <- read_rds("../data/rds/pickup_loc.rds") %>%
-  mutate(pingtimestamp = as.integer(pingtimestamp)) %>%
-  select(-trj_id)
+  mutate(time_int = as.integer(pingtimestamp))
 dropoff_loc <- read_rds("../data/rds/dropoff_loc.rds") %>%
-  mutate(pingtimestamp = as.integer(pingtimestamp)) %>%
-  select(-trj_id)
-pickup_sf <- st_as_sf(read_rds("../data/rds/pickup_sf.rds"))
-dropoff_sf <- st_as_sf(read_rds("../data/rds/dropoff_sf.rds"))
+  mutate(time_int = as.integer(pingtimestamp))
+pickup_sf <- st_as_sf(read_rds("../data/rds/pickup_sf.rds")) %>%
+  left_join(pickup_loc, by = "trj_id") %>%
+  st_intersection(mpsz)
+dropoff_sf <- st_as_sf(read_rds("../data/rds/dropoff_sf.rds")) %>%
+  left_join(dropoff_loc, by = "trj_id") %>%
+  st_intersection(mpsz)
 ```
 # Without normalization
 
 ```{r}
 #| eval: false
-kde_ks_original <- kde(pickup_loc, H = Hlscv(pickup_loc))
+kde_ks_original <- kde(pickup_loc %>%
+                         select(pickup_lng, pickup_lat, time_int), 
+                       H = Hlscv(pickup_loc %>%
+                                   select(pickup_lng, pickup_lat, time_int)))
 
 summary(kde_ks_original$estimate)
 ```
@@ -57,14 +63,38 @@ normalize <- function(x) {
   return ((x - min(x)) / (max(x) - min(x)))
 }
 
-pickup_norm <- as.data.frame(lapply(pickup_loc, normalize))
+pickup_norm <- as.data.frame(lapply(pickup_loc %>% 
+                                      select(pickup_lng, pickup_lat, time_int), 
+                                    normalize))
 
 # Store the original ranges for scaling back
 range_x <- range(pickup_loc$pickup_lng)
 range_y <- range(pickup_loc$pickup_lng)
-range_time <- range(pickup_loc$pingtimestamp)
+range_time <- range(pickup_loc$time_int)
 
 kde_ks <- kde(pickup_norm, H = Hlscv(pickup_norm))
 
 plot(kde_ks)
+```
+
+# Split by region
+
+```{r}
+#| eval: false
+pickup_region <- pickup_sf %>%
+  filter(REGION_N == "CENTRAL REGION") %>%
+  select(pickup_lng, pickup_lat, time_int) %>%
+  st_drop_geometry()
+
+pickup_region_norm <- as.data.frame(lapply(pickup_region, normalize))
+
+# Store the original ranges for scaling back
+region_x <- range(pickup_region$pickup_lng)
+region_y <- range(pickup_region$pickup_lng)
+region_time <- range(pickup_region$time_int)
+
+kde_region <- kde(pickup_region_norm, H = Hlscv(pickup_region_norm))
+
+plot(kde_region)
+
 ```
