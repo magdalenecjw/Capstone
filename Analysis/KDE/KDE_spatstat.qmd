@@ -17,7 +17,7 @@ The packages used are:
 -   tmap package is used to visualize geospatial data on maps.
 
 ```{r}
-pacman::p_load(sf, tidyverse, spatstat, tmap, lubridate)
+pacman::p_load(sf, tidyverse, spatstat, lubridate, gridExtra, fields)
 ```
 
 In the code chunk below, the [cleaned data files](DataPrep.qmd) are loaded into R.
@@ -41,7 +41,8 @@ Convert the sf dataframe to a ppp object using `as.ppp()` function from the spat
 pickup_ppp <- as.ppp(pickup_sf)
 marks(pickup_ppp) <- NULL
 
-plot(pickup_ppp)
+dropoff_ppp <- as.ppp(dropoff_sf)
+marks(dropoff_ppp) <- NULL
 ```
 
 # Create observational window (owin)
@@ -51,6 +52,8 @@ When analysing spatial point patterns, it is a good practice to confine the anal
 ```{r}
 # Create border of Singapore's land area
 mpsz_border <- st_cast(mpsz %>%
+                         filter(!PLN_AREA_N %in% c("WESTERN ISLANDS", "NORTH-EASTERN ISLANDS")
+                                & REGION_N == "EAST REGION") %>%
                          summarize(), "POLYGON")
 
 # Convert the resulting sf object to an owin object
@@ -59,138 +62,15 @@ mpsz_owin <- as.owin(mpsz_border)
 plot(mpsz_owin)
 ```
 
-# Combine point events object and owin object
+# Pick-up Locations: Combine point events object and owin object
 
 In the code chunks below, pick-up and drop-off events located within the observational window are extracted.
 
 ```{r}
 pickup_owin = pickup_ppp[mpsz_owin]
-
-plot(pickup_owin)
-```
-
-# Pick-up Locations - Edge correction
-```{r}
-#| eval: FALSE
 pickup_owin <- rescale(pickup_owin, 1000, "km")
 
-kde1 <- density(pickup_owin, sigma=bw.diggle, edge=TRUE, diggle=FALSE)
-kde2 <- density(pickup_owin, sigma=bw.diggle, edge=TRUE, diggle=TRUE)
-
-png(paste0("Pick-up - Edge Correction/pickup_edge.png"), width=1000, height=350)
-par(mfrow=c(1,2))
-plot(kde1, main="Edge Correction - Default")
-plot(kde2, main="Edge Correction - Improved")
-dev.off()
-```
-
-## Filter by planning area
-
-```{r}
-#| eval: FALSE
-areas <- unique(mpsz$PLN_AREA_N)
-
-for (i in areas){
-  mpsz_filter <- mpsz %>%
-  filter(PLN_AREA_N == i)
-  
-  filter_owin <- as.owin(mpsz_filter)
-    
-  filter_ppp = pickup_ppp[filter_owin]
-  filter_ppp <- rescale(filter_ppp, 1000, "km")
-    
-  # Initialize an error flag
-  error_occurred <- FALSE
-  
-  # Attempt to calculate kde1
-  kde1 <- tryCatch({
-    density(filter_ppp, sigma=bw.diggle, edge=TRUE, diggle=FALSE)
-  }, error = function(e) {
-    cat("Error in processing kde1 for area", i, ": ", e$message, "\n")
-    error_occurred <<- TRUE  # Update error flag
-    return(NULL)
-  })
-  
-  # Skip this iteration if an error occurred in kde1
-  if (error_occurred) {
-    next
-  }
-  
-  kde2 <- density(filter_ppp, sigma=bw.diggle, edge=TRUE, diggle=TRUE)
-  
-  png(paste0("Pick-up - Edge Correction/pickup_edge_",i,".png"), width=1000, height=500)
-  par(mfrow=c(1,2))
-  plot(kde1, main="Edge Correction - Default")
-  plot(kde2, main="Edge Correction - Improved")
-  dev.off()
-}
-```
-
-# Drop-off Locations - Edge correction
-```{r}
-dropoff_ppp <- as.ppp(dropoff_sf)
-marks(dropoff_ppp) <- NULL
-
-plot(dropoff_ppp)
-```
-
-```{r}
-#| eval: FALSE
-dropoff_owin = dropoff_ppp[mpsz_owin]
-dropoff_owin <- rescale(dropoff_owin, 1000, "km")
-
-kde1 <- density(dropoff_owin, sigma=bw.diggle, edge=TRUE, diggle=FALSE)
-kde2 <- density(dropoff_owin, sigma=bw.diggle, edge=TRUE, diggle=TRUE)
-
-png(paste0("Drop-off - Edge Correction/dropoff_edge.png"), width=1000, height=350)
-par(mfrow=c(1,2))
-plot(kde1, main="Edge Correction - Default")
-plot(kde2, main="Edge Correction - Improved")
-dev.off()
-```
-
-## Filter by planning area
-
-```{r}
-#| eval: FALSE
-areas <- unique(mpsz$PLN_AREA_N)
-
-#areas <- "NOVENA"
-
-for (i in areas){
-  mpsz_filter <- mpsz %>%
-  filter(PLN_AREA_N == i)
-  
-  filter_owin <- as.owin(mpsz_filter)
-    
-  filter_ppp = dropoff_ppp[filter_owin]
-  filter_ppp <- rescale(filter_ppp, 1000, "km")
-    
-  # Initialize an error flag
-  error_occurred <- FALSE
-  
-  # Attempt to calculate kde1
-  kde1 <- tryCatch({
-    density(filter_ppp, sigma=bw.diggle, edge=TRUE, diggle=FALSE)
-  }, error = function(e) {
-    cat("Error in processing kde1 for area", i, ": ", e$message, "\n")
-    error_occurred <<- TRUE  # Update error flag
-    return(NULL)
-  })
-  
-  # Skip this iteration if an error occurred in kde1
-  if (error_occurred) {
-    next
-  }
-  
-  kde2 <- density(filter_ppp, sigma=bw.diggle, edge=TRUE, diggle=TRUE)
-  
-  png(paste0("Drop-off - Edge Correction/dropoff_edge_",i,".png"), width=1000, height=400)
-  par(mfrow=c(1,2))
-  plot(kde1, main="Edge Correction - Default")
-  plot(kde2, main="Edge Correction - Improved")
-  dev.off()
-}
+plot(pickup_owin)
 ```
 
 # Pick-up Locations - Bandwidth Selection
@@ -202,57 +82,100 @@ bw_diggle <- density(pickup_owin, sigma=bw.diggle, edge=TRUE)
 bw_ppl <- density(pickup_owin, sigma=bw.ppl, edge=TRUE)
 
 bw_abram <- densityAdaptiveKernel(pickup_owin, edge=TRUE)
-
-png(paste0("pickup_bandwidth.png"), width=800, height=500)
-par(mfrow=c(2,2))
-plot(bw_diggle, main="Fixed Bandwidth - bw.diggle")
-plot(bw_ppl, main="Fixed Bandwidth - bw.ppl")
-plot(bw_abram, main="Adaptive Bandwidth - bw.abram")
-dev.off()
 ```
-
-## Filter by planning area
 
 ```{r}
 #| eval: FALSE
-areas <- unique(mpsz$REGION_N)
+# Convert density objects to data frames for ggplot
+density_diggle_df <- as.data.frame(bw_diggle)
+density_ppl_df <- as.data.frame(bw_ppl)
+density_abram_df <- as.data.frame(bw_abram)
 
-for (i in areas){
-  mpsz_filter <- mpsz %>%
-  filter(REGION_N == i)
-  
-  filter_owin <- as.owin(mpsz_filter)
-    
-  filter_ppp = pickup_ppp[filter_owin]
-  filter_ppp <- rescale(filter_ppp, 1000, "km")
-    
-  # Initialize an error flag
-  error_occurred <- FALSE
-  
-  # Attempt to calculate kde1
-  kde1 <- tryCatch({
-    density(filter_ppp, sigma=bw.diggle, edge=TRUE)
-  }, error = function(e) {
-    cat("Error in processing kde1 for area", i, ": ", e$message, "\n")
-    error_occurred <<- TRUE  # Update error flag
-    return(NULL)
-  })
-  
-  # Skip this iteration if an error occurred in kde1
-  if (error_occurred) {
-    next
-  }
-  
-  kde2 <- density(filter_ppp, sigma=bw.ppl, edge=TRUE)
-  kde3 <- densityAdaptiveKernel(filter_ppp, edge=TRUE)
-  
-  png(paste0("Pick-up - Bandwidth/pickup_bw_",i,".png"), width=800, height=700)
-  par(mfrow=c(2,2))
-  plot(kde1, main="Fixed - bw.diggle")
-  plot(kde2, main="Fixed - bw.ppl")
-  plot(kde3, main="Adaptive - bw.abram")
-  dev.off()
-}
+# Calculate the range of density values across all estimates
+min_density <- min(density_diggle_df$value, density_ppl_df$value, density_abram_df$value)
+max_density <- max(density_diggle_df$value, density_ppl_df$value, density_abram_df$value)
+# Define a common fill scale with consistent limits
+common_fill_scale <- scale_fill_viridis_c(name = "Density: Events per square kilometre", 
+                                          limits = c(min_density, max_density),
+                                          option = "plasma")
+
+# Create ggplot objects
+plot_diggle <- ggplot(density_diggle_df, aes(x, y)) +
+  geom_tile(aes(fill = value)) +
+  common_fill_scale +
+  theme(axis.title = element_blank(), axis.text = element_blank(), axis.ticks = element_blank()) +
+  ggtitle("Fixed Bandwidth Selection using bw.diggle")
+
+plot_ppl <- ggplot(density_ppl_df, aes(x, y)) +
+  geom_tile(aes(fill = value)) +
+  common_fill_scale +
+  theme(axis.title = element_blank(), axis.text = element_blank(), axis.ticks = element_blank()) +
+  ggtitle("Fixed Bandwidth Selection using bw.ppl")
+
+plot_abram <- ggplot(density_abram_df, aes(x, y)) +
+  geom_tile(aes(fill = value)) +
+  common_fill_scale +
+  theme(axis.title = element_blank(), axis.text = element_blank(), axis.ticks = element_blank()) +
+  ggtitle("Adaptive Bandwidth using bw.abram")
+
+# Combine plots using patchwork
+combined_plot <- (plot_diggle + plot_ppl + plot_abram) +
+  plot_layout(guides = "collect") & 
+  theme(legend.position = "bottom", legend.key.size = unit(1, "cm"))
+
+ggsave('pickup_bw_north.png', combined_plot, width = 12, height = 4.5)
+```
+
+# Pick-up Locations - Edge correction
+```{r}
+#| eval: FALSE
+kde1 <- densityAdaptiveKernel(pickup_owin, edge=TRUE, diggle=FALSE)
+kde2 <- densityAdaptiveKernel(pickup_owin, edge=TRUE, diggle=TRUE)
+```
+
+```{r}
+#| eval: FALSE
+# Convert density objects to data frames for ggplot
+density_default <- as.data.frame(kde1)
+density_improved <- as.data.frame(kde2)
+
+# Calculate the range of density values across all estimates
+min_density <- min(density_default$value, density_improved$value)
+max_density <- max(density_default$value, density_improved$value)
+# Define a common fill scale with consistent limits
+common_fill_scale <- scale_fill_viridis_c(name = "Density: Events per square kilometre", 
+                                          limits = c(min_density, max_density),
+                                          option = "plasma")
+
+# Create ggplot objects
+plot_default <- ggplot(density_default, aes(x, y)) +
+  geom_tile(aes(fill = value)) +
+  common_fill_scale +
+  theme(axis.title = element_blank(), axis.text = element_blank(), axis.ticks = element_blank(), 
+        legend.position = "bottom", legend.key.size = unit(1, "cm")) +
+  ggtitle("Default Edge Correction")
+
+plot_improved <- ggplot(density_improved, aes(x, y)) +
+  geom_tile(aes(fill = value)) +
+  common_fill_scale +
+  theme(axis.title = element_blank(), axis.text = element_blank(), axis.ticks = element_blank(),
+        legend.position = "bottom", legend.key.size = unit(1, "cm")) +
+  ggtitle("Improved Edge Correction")
+
+# Combine plots using patchwork
+combined_plot <- (plot_default + plot_improved) 
+combined_plot <- combined_plot + plot_annotation(title = 'Pick-up Events - East Region') + plot_layout(guides = "collect") & theme(legend.position = "bottom", legend.key.size = unit(1, "cm"))
+
+ggsave('pickup_edge_east.png', combined_plot, width = 12, height = 5.5)
+```
+
+# Drop-off Locations: Combine point events object and owin object
+
+```{r}
+dropoff_owin = dropoff_ppp[mpsz_owin]
+dropoff_owin <- rescale(dropoff_owin, 1000, "km")
+
+plot(dropoff_owin)
 ```
 
 # Drop-off Locations - Bandwidth Selection
@@ -262,55 +185,92 @@ for (i in areas){
 bw_diggle <- density(dropoff_owin, sigma=bw.diggle, edge=TRUE)
 bw_ppl <- density(dropoff_owin, sigma=bw.ppl, edge=TRUE)
 bw_abram <- densityAdaptiveKernel(dropoff_owin, edge=TRUE)
-
-png(paste0("dropoff_bandwidth.png"), width=800, height=500)
-par(mfrow=c(2,2))
-plot(bw_diggle, main="Fixed Bandwidth - bw.diggle")
-plot(bw_ppl, main="Fixed Bandwidth - bw.ppl")
-plot(bw_abram, main="Adaptive Bandwidth - bw.abram")
-dev.off()
 ```
 
 ```{r}
 #| eval: FALSE
-areas <- unique(mpsz$REGION_N)
+# Convert density objects to data frames for ggplot
+density_diggle_df <- as.data.frame(bw_diggle)
+density_ppl_df <- as.data.frame(bw_ppl)
+density_abram_df <- as.data.frame(bw_abram)
 
-#areas <- "NOVENA"
+# Calculate the range of density values across all estimates
+min_density <- min(density_diggle_df$value, density_ppl_df$value, density_abram_df$value)
+max_density <- max(density_diggle_df$value, density_ppl_df$value, density_abram_df$value)
+# Define a common fill scale with consistent limits
+common_fill_scale <- scale_fill_viridis_c(name = "Density: Events per square kilometre", 
+                                          limits = c(min_density, max_density),
+                                          option = "plasma")
 
-for (i in areas){
-  mpsz_filter <- mpsz %>%
-  filter(REGION_N == i)
-  
-  filter_owin <- as.owin(mpsz_filter)
-    
-  filter_ppp = dropoff_ppp[filter_owin]
-  filter_ppp <- rescale(filter_ppp, 1000, "km")
-    
-  # Initialize an error flag
-  error_occurred <- FALSE
-  
-  # Attempt to calculate kde1
-  kde1 <- tryCatch({
-    density(filter_ppp, sigma=bw.diggle, edge=TRUE)
-  }, error = function(e) {
-    cat("Error in processing kde1 for area", i, ": ", e$message, "\n")
-    error_occurred <<- TRUE  # Update error flag
-    return(NULL)
-  })
-  
-  # Skip this iteration if an error occurred in kde1
-  if (error_occurred) {
-    next
-  }
-  
-  kde2 <- density(filter_ppp, sigma=bw.ppl, edge=TRUE)
-  kde3 <- densityAdaptiveKernel(filter_ppp, edge=TRUE)
-  
-  png(paste0("Drop-off - Bandwidth/dropoff_bw_",i,".png"), width=800, height=500)
-  par(mfrow=c(2,2))
-  plot(kde1, main="Fixed - bw.diggle")
-  plot(kde2, main="Fixed - bw.ppl")
-  plot(kde3, main="Adaptive - bw.abram")
-  dev.off()
-}
+# Create ggplot objects
+plot_diggle <- ggplot(density_diggle_df, aes(x, y)) +
+  geom_tile(aes(fill = value)) +
+  common_fill_scale +
+  theme(axis.title = element_blank(), axis.text = element_blank(), axis.ticks = element_blank()) +
+  ggtitle("Fixed Bandwidth Selection using bw.diggle")
+
+plot_ppl <- ggplot(density_ppl_df, aes(x, y)) +
+  geom_tile(aes(fill = value)) +
+  common_fill_scale +
+  theme(axis.title = element_blank(), axis.text = element_blank(), axis.ticks = element_blank()) +
+  ggtitle("Fixed Bandwidth Selection using bw.ppl")
+
+plot_abram <- ggplot(density_abram_df, aes(x, y)) +
+  geom_tile(aes(fill = value)) +
+  common_fill_scale +
+  theme(axis.title = element_blank(), axis.text = element_blank(), axis.ticks = element_blank()) +
+  ggtitle("Adaptive Bandwidth using bw.abram")
+
+# Combine plots using patchwork
+combined_plot <- (plot_diggle | plot_ppl) / (plot_abram | plot_spacer()) +
+  plot_layout(guides = "collect") & 
+  theme(legend.position = "bottom", legend.key.size = unit(1, "cm"))
+
+ggsave('dropoff_bw_central.png', combined_plot, width = 9, height = 10)
 ```
+
+# Drop-off Locations - Edge correction
+```{r}
+#| eval: FALSE
+kde1 <- densityAdaptiveKernel(dropoff_owin, edge=TRUE, diggle=FALSE)
+kde2 <- densityAdaptiveKernel(dropoff_owin, edge=TRUE, diggle=TRUE)
+```
+
+```{r}
+#| eval: FALSE
+# Convert density objects to data frames for ggplot
+density_default <- as.data.frame(kde1)
+density_improved <- as.data.frame(kde2)
+
+# Calculate the range of density values across all estimates
+min_density <- min(density_default$value, density_improved$value)
+max_density <- max(density_default$value, density_improved$value)
+# Define a common fill scale with consistent limits
+common_fill_scale <- scale_fill_viridis_c(name = "Density: Events per square kilometre", 
+                                          limits = c(min_density, max_density),
+                                          option = "plasma")
+
+# Create ggplot objects
+plot_default <- ggplot(density_default, aes(x, y)) +
+  geom_tile(aes(fill = value)) +
+  common_fill_scale +
+  theme(axis.title = element_blank(), axis.text = element_blank(), axis.ticks = element_blank(), 
+        legend.position = "bottom", legend.key.size = unit(1, "cm")) +
+  ggtitle("Default Edge Correction")
+
+plot_improved <- ggplot(density_improved, aes(x, y)) +
+  geom_tile(aes(fill = value)) +
+  common_fill_scale +
+  theme(axis.title = element_blank(), axis.text = element_blank(), axis.ticks = element_blank(),
+        legend.position = "bottom", legend.key.size = unit(1, "cm")) +
+  ggtitle("Improved Edge Correction")
+
+# Combine plots using patchwork
+combined_plot <- (plot_default + plot_improved) 
+combined_plot <- combined_plot  + plot_annotation(title = 'Drop-off Events - East Region') + plot_layout(guides = "collect") & theme(legend.position = "bottom", legend.key.size = unit(1, "cm"))
+
+ggsave('dropoff_edge_east.png', combined_plot, width = 12, height = 5.5)
+```
+
+
+
