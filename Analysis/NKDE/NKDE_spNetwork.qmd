@@ -1,0 +1,91 @@
+---
+pagetitle: NKDE Analysis | Capstone
+title: NKDE Analysis using spNetwork package
+---
+
+![](../../Images/4.png){width="500"}
+
+# Getting Started
+
+The code chunk below uses `p_load()` function of pacman package to check if the required packages have been installed on the computer. If they are, the packages will be launched.
+
+The packages used are:
+
+-   sf package is used for importing, managing, and processing geospatial data.
+-   tidyverse package for aspatial data wrangling.
+-   spatstat package to perform 1st-order spatial point patterns analysis and derive kernel density estimation (KDE) layer.
+-   tmap package is used to visualize geospatial data on maps.
+
+```{r}
+pacman::p_load(sf, tidyverse, spatstat, lubridate, tmap, spNetwork, RColorBrewer)
+```
+
+In the code chunk below, the [cleaned data files](DataPrep.qmd) are loaded into R.
+
+```{r}
+# Load base map
+mpsz <- st_read(dsn = "../data/geospatial", 
+               layer = "MPSZ-2019") %>%
+  st_transform(crs = 3414) %>%
+  filter(!PLN_AREA_N %in% c("WESTERN ISLANDS", "NORTH-EASTERN ISLANDS"))
+
+# Load road lines
+sg_road <- read_rds("../data/rds/sg_road.rds")
+
+# Load rds file
+pickup_sf <- st_as_sf(read_rds("../data/rds/pickup_sf.rds"))
+dropoff_sf <- st_as_sf(read_rds("../data/rds/dropoff_sf.rds"))
+```
+
+# Visualising the data
+
+```{r}
+str(sg_road)
+```
+
+```{r}
+# Calculate the length of each linestring geometry
+lengths <- st_length(sg_road)
+print(min(lengths))
+```
+
+```{r}
+#| eval: false
+# Calculate lixels
+lixels <- lixelize_lines(sg_road, 500, mindist = 100)
+samples <- lines_center(lixels)
+
+# Apply NKDE
+densities <- nkde(sg_road, 
+                  events = pickup_sf,
+                  w = rep(1,nrow(pickup_sf)),
+                  samples = samples,
+                  kernel_name = "quartic",
+                  bw = 500, div= "bw", 
+                  method = "discontinuous", digits = 1, tol = 1,
+                  grid_shape = c(2,2), max_depth = 8,
+                  agg = 10, #we aggregate events within a 5m radius (faster calculation)
+                  sparse = TRUE,
+                  verbose = FALSE)
+```
+
+```{r}
+#| eval: false
+# rescaling to help the mapping
+samples$density <- samples$density*1000
+
+samples2 <- samples[order(samples$density),]
+
+colorRamp <- brewer.pal(n = 7, name = "Spectral")
+colorRamp <- rev(colorRamp)
+
+title <- paste0("bike accident density by kilometres in 2016,",
+                "\nwithin a radius of 300 metres")
+
+tm_shape(sg_road) + 
+  tm_lines("black") + 
+  tm_shape(samples2) + 
+  tm_dots("density", style = "kmeans", palette = colorRamp, n = 7, size = 0.1) + 
+  tm_layout(legend.outside = TRUE, 
+            main.title = title , main.title.size = 1)
+```

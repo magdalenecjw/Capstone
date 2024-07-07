@@ -36,41 +36,73 @@ pacman::p_load(arrow, fs, tidyverse, lubridate, data.table, sf, stplanr, tmap)
 The basemap is created using the URA Master Plan 2019, which includes sub-zone boundaries in Singapore. The code chunk below uses `st_read()` function of sf package to import MPSZ-2019 shapefile into R as a polygon feature data frame. As this set of geospatial data is in WGS-84 coordinate system, `st_transform()` function is used to convert it to the svy21 projected coordinate system (`crs = 3414`) that Singapore uses.
 
 ```{r}
-mpsz = st_read(dsn = "../data/geospatial", 
+mpsz <- st_read(dsn = "../data/geospatial", 
                layer = "MPSZ-2019") %>%
-  st_transform(crs = 3414)
+  st_transform(crs = 3414) %>%
+  filter(!PLN_AREA_N %in% c("WESTERN ISLANDS", "NORTH-EASTERN ISLANDS"))
 ```
 
 `qtm()` function of tmap package is then used to plot a simple choropleth map to visualise the subzone boundaries.
 
 ```{r}
 tmap_mode("plot")
-qtm(mpsz)
+tm_shape(mpsz %>%
+           summarize(), "POLYGONS") + 
+  tm_polygons()
 ```
 
 Given that this geospatial dataset only has subzone boundaries without road network lines, there is a need to integrate the latter into the dataset to create a more comprehensive base map. The code chunk below uses `st_read()` function of sf package to import the OpenStreetMap \> Asia \> Malaysia, Singapore and Brunei shapefile extract from the [GeoFabrik website](https://download.geofabrik.de/). As this set of geospatial data is in WGS-84 coordinate system, `st_transform()` function is used to convert it to the svy21 projected coordinate system (`crs = 3414`) that Singapore uses.
 
 ```{r}
 #| eval: false
-roads = st_read(dsn = "../data/geospatial", 
+roads <- st_read(dsn = "../data/geospatial", 
                layer = "gis_osm_roads_free_1") %>%
-  st_transform(crs = 3414)
+  st_transform(crs = 3414) %>%
+  st_sf()
 
-mpsz_road <- mpsz %>%
+roads_sg <- st_cast(mpsz %>% 
+                      summarize(), "POLYGON") %>%
   st_intersection(roads)
+
+str(roads_sg)
+```
+
+A check is performed to ensure that the geometry of all observations are linestrings. 
+
+```{r}
+roads_sg_check <- roads_sg %>%
+  mutate(multi = st_geometry_type(geometry)) %>%
+  filter(multi != "LINESTRING")
+
+# Cast multilinestrings into linestrings
+roads_sg_check_merged <- roads_sg_check %>%
+  st_cast('MULTIPOINT') %>%
+  st_cast('LINESTRING')
+
+st_is_valid(roads_sg_check_merged)
+
+# Merge back with linestrings
+roads_sg_lines <- roads_sg %>%
+  mutate(multi = st_geometry_type(geometry)) %>%
+  filter(multi == "LINESTRING") %>%
+  rbind(roads_sg_check_merged)
+
+roads_sf <- st_cast(roads_sg_lines, "LINESTRING")
+
+str(roads_sf)
 ```
 
 ```{r}
 #| echo: false
 #| eval: false
 # Save the output as rds file instead of rendering the above code chunks
-write_rds(mpsz_road, "../data/rds/mpsz_road.rds")
+write_rds(roads_sf, "../data/rds/sg_road.rds")
 ```
 
 ```{r}
 #| echo: false
 # Load rds file instead of rendering the above code chunks
-mpsz_road <- read_rds("../data/rds/mpsz_road.rds")
+mpsz_road <- read_rds("../data/rds/sg_road.rds")
 ```
 
 `tm_shape()` and `tm_lines()` functions of tmap package are then used to plot a simple choropleth map to visualise the roads within various planning subzones.

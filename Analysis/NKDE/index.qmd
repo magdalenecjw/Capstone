@@ -4,7 +4,7 @@ title: NKDE Analysis
 search: false
 listing:
   contents: 
-  - Week1.qmd
+  - NKDE_spNetwork.qmd
   - "!index.qmd"
   type: grid
   categories: true
