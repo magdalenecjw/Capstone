@@ -29,12 +29,49 @@ mpsz <- st_read(dsn = "../data/geospatial",
   st_transform(crs = 3414) %>%
   filter(!PLN_AREA_N %in% c("WESTERN ISLANDS", "NORTH-EASTERN ISLANDS"))
 
-# Load road lines
-sg_road <- read_rds("../data/rds/sg_road.rds")
-
 # Load rds file
 pickup_sf <- st_as_sf(read_rds("../data/rds/pickup_sf.rds"))
 dropoff_sf <- st_as_sf(read_rds("../data/rds/dropoff_sf.rds"))
+```
+
+The code chunk below uses `st_read()` function of sf package to import the OpenStreetMap \> Asia \> Malaysia, Singapore and Brunei shapefile extract from the [GeoFabrik website](https://download.geofabrik.de/). As this set of geospatial data is in WGS-84 coordinate system, `st_transform()` function is used to convert it to the svy21 projected coordinate system (`crs = 3414`) that Singapore uses.
+
+```{r}
+#| eval: false
+roads <- st_read(dsn = "../data/geospatial", 
+               layer = "gis_osm_roads_free_1") %>%
+  st_transform(crs = 3414) %>%
+  st_sf()
+
+roads_sg <- st_cast(mpsz %>% 
+                      filter(PLN_AREA_N == "EAST REGION") %>%
+                      summarize(), "POLYGON") %>%
+  st_intersection(roads)
+
+str(roads_sg)
+```
+
+A check is performed to ensure that the geometry of all observations are linestrings. Since some are multilinestrings, they are cast into multipoints then merged back to form a single linestring. 
+
+```{r}
+roads_sg_check <- roads_sg %>%
+  mutate(multi = st_geometry_type(geometry)) %>%
+  filter(multi != "LINESTRING")
+
+# Cast multilinestrings into linestrings
+roads_sg_check_merged <- roads_sg_check %>%
+  st_cast('MULTIPOINT') %>%
+  st_cast('LINESTRING')
+
+# Merge back with linestrings
+roads_sg_lines <- roads_sg %>%
+  mutate(multi = st_geometry_type(geometry)) %>%
+  filter(multi == "LINESTRING") %>%
+  rbind(roads_sg_check_merged)
+
+roads_sf <- st_cast(roads_sg_lines, "LINESTRING")
+
+str(roads_sf)
 ```
 
 # Visualising the data
