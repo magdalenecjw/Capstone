@@ -43,17 +43,16 @@ roads <- st_read(dsn = "../data/geospatial",
   st_transform(crs = 3414) %>%
   st_sf()
 
-roads_sg <- st_cast(mpsz %>% 
-                      filter(PLN_AREA_N == "EAST REGION") %>%
-                      summarize(), "POLYGON") %>%
+roads_sg <- st_cast(mpsz) %>%
   st_intersection(roads)
 
 str(roads_sg)
 ```
 
-A check is performed to ensure that the geometry of all observations are linestrings. Since some are multilinestrings, they are cast into multipoints then merged back to form a single linestring. 
+Since the geometry is "sfc_GEOMETRY" rather than "sfc_LINESTRING", a check is performed to ensure that the geometry of all observations are linestrings. As it appears that there are some multilinestrings, they are cast into multipoints then merged back to form a single linestring. These lines are then merged back into the original dataset. 
 
 ```{r}
+#| eval: false
 roads_sg_check <- roads_sg %>%
   mutate(multi = st_geometry_type(geometry)) %>%
   filter(multi != "LINESTRING")
@@ -74,34 +73,56 @@ roads_sf <- st_cast(roads_sg_lines, "LINESTRING")
 str(roads_sf)
 ```
 
-# Visualising the data
+The structure now shows "sfc_LINESTRING".
 
 ```{r}
-str(sg_road)
+#| echo: false
+#| eval: false
+# Save the output as rds file instead of rendering the above code chunks
+write_rds(roads_sf, "../data/rds/sg_road.rds")
+```
+
+```{r}
+#| echo: false
+# Load rds file instead of rendering the above code chunks
+sg_road <- read_rds("../data/rds/sg_road.rds")
+```
+
+# Filter by region
+
+```{r}
+sg_road_filtered <- sg_road %>%
+  filter(PLN_AREA_N == "ANG MO KIO") %>%
+  select(osm_id, geometry)
+
+pickup_filtered <- pickup_sf %>%
+  st_intersection(mpsz %>%
+                    filter(PLN_AREA_N == "ANG MO KIO"))
 ```
 
 ```{r}
 # Calculate the length of each linestring geometry
-lengths <- st_length(sg_road)
+lengths <- st_length(sg_road_filtered)
 print(min(lengths))
 ```
 
 ```{r}
 #| eval: false
 # Calculate lixels
-lixels <- lixelize_lines(sg_road, 500, mindist = 100)
+lixels <- lixelize_lines(sg_road_filtered, 500, mindist = 100)
 samples <- lines_center(lixels)
 
 # Apply NKDE
-densities <- nkde(sg_road, 
-                  events = pickup_sf,
-                  w = rep(1,nrow(pickup_sf)),
+# then applying the NKDE
+densities <- nkde(sg_road_filtered, 
+                  events = pickup_filtered,
+                  w = rep(1,nrow(pickup_filtered)),
                   samples = samples,
                   kernel_name = "quartic",
-                  bw = 500, div= "bw", 
+                  bw = 300, div= "bw", 
                   method = "discontinuous", digits = 1, tol = 1,
-                  grid_shape = c(2,2), max_depth = 8,
-                  agg = 10, #we aggregate events within a 5m radius (faster calculation)
+                  grid_shape = c(1,1), max_depth = 8,
+                  agg = 5, #we aggregate events within a 5m radius (faster calculation)
                   sparse = TRUE,
                   verbose = FALSE)
 ```
@@ -109,6 +130,7 @@ densities <- nkde(sg_road,
 ```{r}
 #| eval: false
 # rescaling to help the mapping
+samples$density <- densities
 samples$density <- samples$density*1000
 
 samples2 <- samples[order(samples$density),]
@@ -119,7 +141,7 @@ colorRamp <- rev(colorRamp)
 title <- paste0("bike accident density by kilometres in 2016,",
                 "\nwithin a radius of 300 metres")
 
-tm_shape(sg_road) + 
+tm_shape(sg_road_filtered) + 
   tm_lines("black") + 
   tm_shape(samples2) + 
   tm_dots("density", style = "kmeans", palette = colorRamp, n = 7, size = 0.1) + 
