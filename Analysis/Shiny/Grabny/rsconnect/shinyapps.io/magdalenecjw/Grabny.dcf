@@ -1,12 +1,12 @@
-name: GrabShiny
-title: GrabShiny
+name: Grabny
+title: Grabny
 username: magdalenecjw
 account: magdalenecjw
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
-appId: 12328052
-bundleId: 8873423
-url: https://magdalenecjw.shinyapps.io/GrabShiny/
+appId: 12328466
+bundleId: 8873490
+url: https://magdalenecjw.shinyapps.io/Grabny/
 version: 1
 asMultiple: FALSE
 asStatic: FALSE
