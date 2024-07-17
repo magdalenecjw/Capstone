@@ -4,10 +4,10 @@ pacman::p_load(sf, tidyverse, lubridate, spNetwork,
                shiny, shinydashboard, shinycssloaders, tools, shinyjs)
 
 #### Load Data ####
-mpsz <- st_as_sf(read_rds("mpsz.rds"))
-pickup_sf <- st_as_sf(read_rds("pickup_sf.rds"))
-dropoff_sf <- st_as_sf(read_rds("dropoff_sf.rds"))
-sg_road <- st_as_sf(read_rds("sg_road.rds"))
+mpsz <- read_rds("mpsz.rds")
+pickup_sf <- read_rds("pickup_sf.rds")
+dropoff_sf <- read_rds("dropoff_sf.rds")
+sg_road <- read_rds("sg_road.rds")
 
 planning_areas <- sort(str_to_title(unique(sg_road$PLN_AREA_N)))
 
@@ -24,14 +24,14 @@ filter_by_location <- function(location, data_type) {
   
   if (data_type == "pickup") {
     events_filtered <- pickup_sf %>%
-      st_intersection(mpsz_filtered)
+      st_intersection(st_as_sf(mpsz_filtered))
   } else {
     events_filtered <- dropoff_sf %>%
-      st_intersection(mpsz_filtered)
+      st_intersection(st_as_sf(mpsz_filtered))
   }
   
-  list(sg_road_filtered = sg_road_filtered, 
-       mpsz_filtered = mpsz_filtered, 
+  list(sg_road_filtered = st_as_sf(sg_road_filtered), 
+       mpsz_filtered = st_as_sf(mpsz_filtered), 
        events_filtered = events_filtered)
 }
 
@@ -41,16 +41,16 @@ compute_optimal_bw <- function(filtered_objects, method) {
   events_filtered <- filtered_objects$events_filtered
   
   bw_list <- bw_cv_likelihood_calc(
-    bws = seq(50,700,50),
+    bws = seq(50, 700, 50),
     lines = sg_road_filtered, 
     events = events_filtered,
-    w = rep(1,nrow(events_filtered)),
+    w = rep(1, nrow(events_filtered)),
     kernel_name = "quartic", method = tolower(method),
     diggle_correction = FALSE, study_area = NULL,
     max_depth = 8,
-    digits=2, tol=0.1, agg=5,
-    sparse=TRUE, grid_shape=c(1,1),
-    verbose=FALSE, check=TRUE)
+    digits = 2, tol = 0.1, agg = 5,
+    sparse = TRUE, grid_shape = c(1, 1),
+    verbose = FALSE, check = TRUE)
   
   # Function to get the corresponding bw value for the lowest cv_score in each column
   get_max_bw <- function(cv_values) {
@@ -77,7 +77,7 @@ compute_densities <- function(location, bw, method, filtered_objects) {
                     kernel_name = "quartic",
                     bw = bw, div = "bw", 
                     method = tolower(method), digits = 1, tol = 1,
-                    grid_shape = c(1,1), max_depth = 8,
+                    grid_shape = c(1, 1), max_depth = 8,
                     agg = 5, 
                     sparse = TRUE,
                     verbose = FALSE)

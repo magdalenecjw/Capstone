@@ -37,9 +37,18 @@ write_rds(mpsz, "../data/rds/mpsz.rds")
 
 ```{r}
 # Load rds file
-mpsz <- st_as_sf(read_rds("../data/rds/mpsz.rds"))
-pickup_sf <- st_as_sf(read_rds("../data/rds/pickup_sf.rds"))
-dropoff_sf <- st_as_sf(read_rds("../data/rds/dropoff_sf.rds"))
+mpsz <- st_as_sf(read_rds("../data/rds/mpsz.rds")) %>%
+  select("SUBZONE_N", "PLN_AREA_N", "REGION_N", "geometry")
+  
+pickup_sf <- st_as_sf(read_rds("../data/rds/pickup_sf.rds")) %>%
+  select("geometry")
+
+dropoff_sf <- st_as_sf(read_rds("../data/rds/dropoff_sf.rds")) %>%
+  select("geometry")
+  
+write_rds(mpsz, "../data/rds/mpsz_shiny.rds")
+write_rds(pickup_sf, "../data/rds/pickup_shiny.rds")
+write_rds(dropoff_sf, "../data/rds/dropoff_shiny.rds")
 ```
 
 The code chunk below uses `st_read()` function of sf package to import the OpenStreetMap \> Asia \> Malaysia, Singapore and Brunei shapefile extract from the [GeoFabrik website](https://download.geofabrik.de/). As this set of geospatial data is in WGS-84 coordinate system, `st_transform()` function is used to convert it to the svy21 projected coordinate system (`crs = 3414`) that Singapore uses.
@@ -93,7 +102,10 @@ write_rds(roads_sf, "../data/rds/sg_road.rds")
 ```{r}
 #| echo: false
 # Load rds file instead of rendering the above code chunks
-sg_road <- read_rds("../data/rds/sg_road.rds")
+sg_road <- read_rds("../data/rds/sg_road.rds") %>%
+  select("PLN_AREA_N", "osm_id", "name", "geometry")
+
+write_rds(sg_road, "../data/rds/sg_road_shiny.rds")
 ```
 
 # Comparison of fixed bandwidths for the three methods
