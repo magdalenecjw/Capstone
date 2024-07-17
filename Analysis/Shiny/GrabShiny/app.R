@@ -4,10 +4,10 @@ pacman::p_load(sf, tidyverse, lubridate, spNetwork,
                shiny, shinydashboard, shinycssloaders, tools, shinyjs)
 
 #### Load Data ####
-mpsz <- read_rds("mpsz.rds")
-pickup_sf <- read_rds("pickup_sf.rds")
-dropoff_sf <- read_rds("dropoff_sf.rds")
-sg_road <- read_rds("sg_road.rds")
+mpsz <- read_rds("mpsz_shiny.rds")
+pickup_sf <- read_rds("pickup_shiny.rds")
+dropoff_sf <- read_rds("dropoff_shiny.rds")
+sg_road <- read_rds("sg_road_shiny.rds")
 
 planning_areas <- sort(str_to_title(unique(sg_road$PLN_AREA_N)))
 
