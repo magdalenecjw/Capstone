@@ -70,6 +70,7 @@ str(roads_sg)
 A check is performed to ensure that the geometry of all observations are linestrings. 
 
 ```{r}
+#| eval: false
 roads_sg_check <- roads_sg %>%
   mutate(multi = st_geometry_type(geometry)) %>%
   filter(multi != "LINESTRING")

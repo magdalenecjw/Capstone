@@ -23,13 +23,21 @@ pacman::p_load(sf, tidyverse, spatstat, lubridate, tmap, spNetwork, RColorBrewer
 In the code chunk below, the [cleaned data files](DataPrep.qmd) are loaded into R.
 
 ```{r}
+#| echo: false
+#| eval: false
 # Load base map
 mpsz <- st_read(dsn = "../data/geospatial", 
                layer = "MPSZ-2019") %>%
   st_transform(crs = 3414) %>%
   filter(!PLN_AREA_N %in% c("WESTERN ISLANDS", "NORTH-EASTERN ISLANDS"))
 
+# Save the output as rds file instead of rendering the above code chunks
+write_rds(mpsz, "../data/rds/mpsz.rds")
+```
+
+```{r}
 # Load rds file
+mpsz <- st_as_sf(read_rds("../data/rds/mpsz.rds"))
 pickup_sf <- st_as_sf(read_rds("../data/rds/pickup_sf.rds"))
 dropoff_sf <- st_as_sf(read_rds("../data/rds/dropoff_sf.rds"))
 ```
@@ -88,63 +96,205 @@ write_rds(roads_sf, "../data/rds/sg_road.rds")
 sg_road <- read_rds("../data/rds/sg_road.rds")
 ```
 
-# Filter by region
+# Comparison of fixed bandwidths for the three methods
 
 ```{r}
-sg_road_filtered <- sg_road %>%
-  filter(PLN_AREA_N == "ANG MO KIO") %>%
-  select(osm_id, geometry)
+# Generate filtered data set
+filter_data <- function(location) {
+  sg_road_filtered <- sg_road %>%
+    filter(PLN_AREA_N == location) %>%
+    select(osm_id, name, geometry)
+  
+  mpsz_filtered <- mpsz %>%
+    filter(PLN_AREA_N == location)
+  
+  pickup_filtered <- pickup_sf %>%
+    st_intersection(mpsz_filtered)
+  
+  list(sg_road_filtered = sg_road_filtered, 
+       mpsz_filtered = mpsz_filtered, 
+       pickup_filtered = pickup_filtered)
+}
 
-pickup_filtered <- pickup_sf %>%
-  st_intersection(mpsz %>%
-                    filter(PLN_AREA_N == "ANG MO KIO"))
+# Example usage
+filtered_objects <- filter_data("ANG MO KIO")
+
+# Access the filtered objects
+sg_road_filtered <- filtered_objects$sg_road_filtered
+mpsz_filtered <- filtered_objects$mpsz_filtered
+pickup_filtered <- filtered_objects$pickup_filtered
+rm(filtered_objects)
 ```
 
 ```{r}
-# Calculate the length of each linestring geometry
-lengths <- st_length(sg_road_filtered)
-print(min(lengths))
+bw_cv_simple <- bw_cv_likelihood_calc(
+  bws = seq(50,700,50),
+  lines = sg_road_filtered, 
+  events = pickup_filtered,
+  w = rep(1,nrow(pickup_filtered)),
+  kernel_name = "quartic", method = "simple",
+  diggle_correction = FALSE, study_area = NULL,
+  max_depth = 8,
+  digits=2, tol=0.1, agg=5,
+  sparse=TRUE, grid_shape=c(1,1),
+  verbose=FALSE, check=TRUE)
+
+bw_cv_cont <- bw_cv_likelihood_calc(
+  bws = seq(50,700,50),
+  lines = sg_road_filtered, 
+  events = pickup_filtered,
+  w = rep(1,nrow(pickup_filtered)),
+  kernel_name = "quartic", method = "continuous",
+  diggle_correction = FALSE, study_area = NULL,
+  max_depth = 8,
+  digits=2, tol=0.1, agg=5,
+  sparse=TRUE, grid_shape=c(1,1),
+  verbose=FALSE, check=TRUE)
+
+bw_cv_dis <- bw_cv_likelihood_calc(
+  bws = seq(50,700,50),
+  lines = sg_road_filtered, 
+  events = pickup_filtered,
+  w = rep(1,nrow(pickup_filtered)),
+  kernel_name = "quartic", method = "discontinuous",
+  diggle_correction = FALSE, study_area = NULL,
+  max_depth = 8,
+  digits=2, tol=0.1, agg=5,
+  sparse=TRUE, grid_shape=c(1,1),
+  verbose=FALSE, check=TRUE)
+
+cv_values <- data.frame(
+  "bw" = bw_cv_simple$bw,
+  "cv_likelihood_simple" = bw_cv_simple$cv_scores,
+  "cv_likelihood_cont" = bw_cv_cont$cv_scores,
+  "cv_likelihood_dis" = bw_cv_dis$cv_scores
+)
+
+# Function to get the corresponding bw value for the lowest cv_score in each column
+get_max_bw <- function(cv_values) {
+  sapply(cv_values[-1], function(x) cv_values$bw[which.max(x)])
+}
+
+# Get the corresponding bw values for the lowest cv_scores
+max_bw_values <- get_max_bw(cv_values)
+
+# Print the results
+print(max_bw_values)
+```
+
+The above table suggests the following bandwidth for each of the three methods:
+
+- at least 700m for the simple method
+- 400m for the continuous method
+- 450m for the discontinuous method
+
+```{r}
+process_location_density <- function(location, bw_value, mtd) {
+  # Filter by location
+  sg_road_filtered <- sg_road %>%
+    filter(PLN_AREA_N == location) %>%
+    select(osm_id, name,geometry)
+  
+  mpsz_filtered <- mpsz %>%
+    filter(PLN_AREA_N == location)
+  
+  pickup_filtered <- pickup_sf %>%
+    st_intersection(mpsz %>%
+                      filter(PLN_AREA_N == location))
+  
+  # Calculate lixels
+  lixels <- lixelize_lines(sg_road_filtered, 500, mindist = 100)
+  samples <- lines_center(lixels)
+  
+  # Apply NKDE
+  densities <- nkde(sg_road_filtered, 
+                    events = pickup_filtered,
+                    w = rep(1, nrow(pickup_filtered)),
+                    samples = samples,
+                    kernel_name = "quartic",
+                    bw = bw_value, div = "bw", 
+                    method = mtd, digits = 1, tol = 1,
+                    grid_shape = c(1,1), max_depth = 8,
+                    agg = 5, # Aggregate events within a 5m radius (faster calculation)
+                    sparse = TRUE,
+                    verbose = FALSE)
+  
+  # Rescaling to help the mapping
+  samples$density <- densities
+  samples$density <- samples$density * 1000
+  samples2 <- samples[order(samples$density),]
+  
+  colorRamp <- brewer.pal(n = 7, name = "Spectral")
+  colorRamp <- rev(colorRamp)
+  
+  title <- paste0("Pickup events density (km) in April 2019 within a radius of ", 
+                  bw_value,"m\n", location, " - ", mtd)
+  
+  # Plot the result
+  plot <- tm_shape(sg_road_filtered) + 
+    tm_lines("black") + 
+    tm_shape(mpsz_filtered) +
+    tm_polygons() + 
+    tm_shape(samples2) + 
+    tm_dots("density", style = "kmeans", palette = colorRamp, n = 7, size = 0.05) + 
+    tm_layout(legend.outside = TRUE, 
+              main.title = title , main.title.size = 1)
+  
+  # Save the plot as a PNG file
+  png_filename <- paste0("pickup_density_", gsub(" ", "_", tolower(location)), "_", mtd, ".png")
+  tmap_save(plot, filename = png_filename)
+}
 ```
 
 ```{r}
-#| eval: false
+process_location_density("ANG MO KIO", 700, "simple")
+process_location_density("ANG MO KIO", 400, "continuous")
+process_location_density("ANG MO KIO", 450, "discontinuous")
+```
+
+```{r}
 # Calculate lixels
 lixels <- lixelize_lines(sg_road_filtered, 500, mindist = 100)
 samples <- lines_center(lixels)
-
+  
 # Apply NKDE
-# then applying the NKDE
 densities <- nkde(sg_road_filtered, 
                   events = pickup_filtered,
-                  w = rep(1,nrow(pickup_filtered)),
+                  w = rep(1, nrow(pickup_filtered)),
                   samples = samples,
                   kernel_name = "quartic",
-                  bw = 300, div= "bw", 
+                  bw = 450, div = "bw", 
                   method = "discontinuous", digits = 1, tol = 1,
                   grid_shape = c(1,1), max_depth = 8,
-                  agg = 5, #we aggregate events within a 5m radius (faster calculation)
+                  agg = 5, # Aggregate events within a 5m radius (faster calculation)
                   sparse = TRUE,
                   verbose = FALSE)
-```
-
-```{r}
-#| eval: false
-# rescaling to help the mapping
+  
+# Rescaling to help the mapping
 samples$density <- densities
-samples$density <- samples$density*1000
-
+samples$density <- samples$density * 1000
 samples2 <- samples[order(samples$density),]
-
+  
 colorRamp <- brewer.pal(n = 7, name = "Spectral")
 colorRamp <- rev(colorRamp)
-
-title <- paste0("bike accident density by kilometres in 2016,",
-                "\nwithin a radius of 300 metres")
-
+  
+# Plot the result
+tmap_mode("view")
 tm_shape(sg_road_filtered) + 
   tm_lines("black") + 
   tm_shape(samples2) + 
-  tm_dots("density", style = "kmeans", palette = colorRamp, n = 7, size = 0.1) + 
-  tm_layout(legend.outside = TRUE, 
-            main.title = title , main.title.size = 1)
+  tm_dots("density", id = "name", style = "kmeans", palette = colorRamp, n = 7, size = 0.05) + 
+  tm_layout(legend.outside = TRUE)
+```
+
+```{r}
+# Generate list of locations
+all_locations <- unique(sg_road$PLN_AREA_N)
+
+print(all_locations)
+
+# Loop through each location and process the density plot
+for (location in all_locations) {
+  process_location_density(location)
+}
 ```
