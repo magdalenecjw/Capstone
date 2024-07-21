@@ -37,18 +37,9 @@ write_rds(mpsz, "../data/rds/mpsz.rds")
 
 ```{r}
 # Load rds file
-mpsz <- st_as_sf(read_rds("../data/rds/mpsz.rds")) %>%
-  select("SUBZONE_N", "PLN_AREA_N", "REGION_N", "geometry")
-  
-pickup_sf <- st_as_sf(read_rds("../data/rds/pickup_sf.rds")) %>%
-  select("geometry")
-
-dropoff_sf <- st_as_sf(read_rds("../data/rds/dropoff_sf.rds")) %>%
-  select("geometry")
-  
-write_rds(mpsz, "../data/rds/mpsz_shiny.rds")
-write_rds(pickup_sf, "../data/rds/pickup_shiny.rds")
-write_rds(dropoff_sf, "../data/rds/dropoff_shiny.rds")
+mpsz <- st_as_sf(read_rds("../data/rds/mpsz.rds"))
+pickup_sf <- st_as_sf(read_rds("../data/rds/pickup_sf.rds"))
+dropoff_sf <- st_as_sf(read_rds("../data/rds/dropoff_sf.rds"))
 ```
 
 The code chunk below uses `st_read()` function of sf package to import the OpenStreetMap \> Asia \> Malaysia, Singapore and Brunei shapefile extract from the [GeoFabrik website](https://download.geofabrik.de/). As this set of geospatial data is in WGS-84 coordinate system, `st_transform()` function is used to convert it to the svy21 projected coordinate system (`crs = 3414`) that Singapore uses.
@@ -102,15 +93,11 @@ write_rds(roads_sf, "../data/rds/sg_road.rds")
 ```{r}
 #| echo: false
 # Load rds file instead of rendering the above code chunks
-sg_road <- read_rds("../data/rds/sg_road.rds") %>%
-  select("PLN_AREA_N", "osm_id", "name", "geometry")
-
-write_rds(sg_road, "../data/rds/sg_road_shiny.rds")
+sg_road <- read_rds("../data/rds/sg_road.rds")
 ```
 
-# Comparison of fixed bandwidths for the three methods
-
 ```{r}
+#| eval: false
 # Generate filtered data set
 filter_data <- function(location) {
   sg_road_filtered <- sg_road %>%
@@ -128,8 +115,7 @@ filter_data <- function(location) {
        pickup_filtered = pickup_filtered)
 }
 
-# Example usage
-filtered_objects <- filter_data("ANG MO KIO")
+filtered_objects <- filter_data("ORCHARD")
 
 # Access the filtered objects
 sg_road_filtered <- filtered_objects$sg_road_filtered
@@ -138,49 +124,20 @@ pickup_filtered <- filtered_objects$pickup_filtered
 rm(filtered_objects)
 ```
 
+# Comparison of fixed bandwidths for the three methods
+
 ```{r}
+#| eval: false
 bw_cv_simple <- bw_cv_likelihood_calc(
-  bws = seq(50,700,50),
-  lines = sg_road_filtered, 
-  events = pickup_filtered,
-  w = rep(1,nrow(pickup_filtered)),
-  kernel_name = "quartic", method = "simple",
-  diggle_correction = FALSE, study_area = NULL,
-  max_depth = 8,
-  digits=2, tol=0.1, agg=5,
-  sparse=TRUE, grid_shape=c(1,1),
-  verbose=FALSE, check=TRUE)
-
-bw_cv_cont <- bw_cv_likelihood_calc(
-  bws = seq(50,700,50),
-  lines = sg_road_filtered, 
-  events = pickup_filtered,
-  w = rep(1,nrow(pickup_filtered)),
-  kernel_name = "quartic", method = "continuous",
-  diggle_correction = FALSE, study_area = NULL,
-  max_depth = 8,
-  digits=2, tol=0.1, agg=5,
-  sparse=TRUE, grid_shape=c(1,1),
-  verbose=FALSE, check=TRUE)
-
-bw_cv_dis <- bw_cv_likelihood_calc(
-  bws = seq(50,700,50),
+  bws = seq(50,1000,50),
   lines = sg_road_filtered, 
   events = pickup_filtered,
   w = rep(1,nrow(pickup_filtered)),
   kernel_name = "quartic", method = "discontinuous",
-  diggle_correction = FALSE, study_area = NULL,
   max_depth = 8,
   digits=2, tol=0.1, agg=5,
   sparse=TRUE, grid_shape=c(1,1),
   verbose=FALSE, check=TRUE)
-
-cv_values <- data.frame(
-  "bw" = bw_cv_simple$bw,
-  "cv_likelihood_simple" = bw_cv_simple$cv_scores,
-  "cv_likelihood_cont" = bw_cv_cont$cv_scores,
-  "cv_likelihood_dis" = bw_cv_dis$cv_scores
-)
 
 # Function to get the corresponding bw value for the lowest cv_score in each column
 get_max_bw <- function(cv_values) {
@@ -188,85 +145,17 @@ get_max_bw <- function(cv_values) {
 }
 
 # Get the corresponding bw values for the lowest cv_scores
-max_bw_values <- get_max_bw(cv_values)
+max_bw_values <- get_max_bw(bw_cv_simple)
 
 # Print the results
 print(max_bw_values)
 ```
 
-The above table suggests the following bandwidth for each of the three methods:
-
-- at least 700m for the simple method
-- 400m for the continuous method
-- 450m for the discontinuous method
-
 ```{r}
-process_location_density <- function(location, bw_value, mtd) {
-  # Filter by location
-  sg_road_filtered <- sg_road %>%
-    filter(PLN_AREA_N == location) %>%
-    select(osm_id, name,geometry)
-  
-  mpsz_filtered <- mpsz %>%
-    filter(PLN_AREA_N == location)
-  
-  pickup_filtered <- pickup_sf %>%
-    st_intersection(mpsz %>%
-                      filter(PLN_AREA_N == location))
-  
-  # Calculate lixels
-  lixels <- lixelize_lines(sg_road_filtered, 500, mindist = 100)
-  samples <- lines_center(lixels)
-  
-  # Apply NKDE
-  densities <- nkde(sg_road_filtered, 
-                    events = pickup_filtered,
-                    w = rep(1, nrow(pickup_filtered)),
-                    samples = samples,
-                    kernel_name = "quartic",
-                    bw = bw_value, div = "bw", 
-                    method = mtd, digits = 1, tol = 1,
-                    grid_shape = c(1,1), max_depth = 8,
-                    agg = 5, # Aggregate events within a 5m radius (faster calculation)
-                    sparse = TRUE,
-                    verbose = FALSE)
-  
-  # Rescaling to help the mapping
-  samples$density <- densities
-  samples$density <- samples$density * 1000
-  samples2 <- samples[order(samples$density),]
-  
-  colorRamp <- brewer.pal(n = 7, name = "Spectral")
-  colorRamp <- rev(colorRamp)
-  
-  title <- paste0("Pickup events density (km) in April 2019 within a radius of ", 
-                  bw_value,"m\n", location, " - ", mtd)
-  
-  # Plot the result
-  plot <- tm_shape(sg_road_filtered) + 
-    tm_lines("black") + 
-    tm_shape(mpsz_filtered) +
-    tm_polygons() + 
-    tm_shape(samples2) + 
-    tm_dots("density", style = "kmeans", palette = colorRamp, n = 7, size = 0.05) + 
-    tm_layout(legend.outside = TRUE, 
-              main.title = title , main.title.size = 1)
-  
-  # Save the plot as a PNG file
-  png_filename <- paste0("pickup_density_", gsub(" ", "_", tolower(location)), "_", mtd, ".png")
-  tmap_save(plot, filename = png_filename)
-}
-```
-
-```{r}
-process_location_density("ANG MO KIO", 700, "simple")
-process_location_density("ANG MO KIO", 400, "continuous")
-process_location_density("ANG MO KIO", 450, "discontinuous")
-```
-
-```{r}
+#| eval: false
 # Calculate lixels
-lixels <- lixelize_lines(sg_road_filtered, 500, mindist = 100)
+lixel_length <- max_bw_values/5
+lixels <- lixelize_lines(sg_road_filtered, lixel_length, mindist = 50)
 samples <- lines_center(lixels)
   
 # Apply NKDE
@@ -275,38 +164,23 @@ densities <- nkde(sg_road_filtered,
                   w = rep(1, nrow(pickup_filtered)),
                   samples = samples,
                   kernel_name = "quartic",
-                  bw = 450, div = "bw", 
+                  bw = max_bw_values, div = "bw", 
                   method = "discontinuous", digits = 1, tol = 1,
                   grid_shape = c(1,1), max_depth = 8,
                   agg = 5, # Aggregate events within a 5m radius (faster calculation)
-                  sparse = TRUE,
-                  verbose = FALSE)
+                  sparse = TRUE, verbose = FALSE)
   
 # Rescaling to help the mapping
 samples$density <- densities
-samples$density <- samples$density * 1000
-samples2 <- samples[order(samples$density),]
+lixels$density <- densities
+samples$density <- samples$density*1000
+lixels$density <- lixels$density*1000
   
-colorRamp <- brewer.pal(n = 7, name = "Spectral")
-colorRamp <- rev(colorRamp)
+colorRamp <- c("lightblue", "lemonchiffon", "lightpink", "indianred", "firebrick")
   
 # Plot the result
-tmap_mode("view")
-tm_shape(sg_road_filtered) + 
-  tm_lines("black") + 
-  tm_shape(samples2) + 
-  tm_dots("density", id = "name", style = "kmeans", palette = colorRamp, n = 7, size = 0.05) + 
-  tm_layout(legend.outside = TRUE)
+tm_shape(lixels) + 
+  tm_lines(col = "density", id = "name", size = 2, style = "kmeans", n=5, palette = colorRamp) + 
+  tm_view(set.zoom.limits = c(11, 16), set.view = 14)
 ```
 
-```{r}
-# Generate list of locations
-all_locations <- unique(sg_road$PLN_AREA_N)
-
-print(all_locations)
-
-# Loop through each location and process the density plot
-for (location in all_locations) {
-  process_location_density(location)
-}
-```

@@ -41,12 +41,11 @@ compute_optimal_bw <- function(filtered_objects, method) {
   events_filtered <- filtered_objects$events_filtered
   
   bw_list <- bw_cv_likelihood_calc(
-    bws = seq(50, 700, 50),
+    bws = seq(100, 1000, 50),
     lines = sg_road_filtered, 
     events = events_filtered,
     w = rep(1, nrow(events_filtered)),
     kernel_name = "quartic", method = tolower(method),
-    diggle_correction = FALSE, study_area = NULL,
     max_depth = 8,
     digits = 2, tol = 0.1, agg = 5,
     sparse = TRUE, grid_shape = c(1, 1),
@@ -63,11 +62,12 @@ compute_optimal_bw <- function(filtered_objects, method) {
 }
 
 # Define a function to compute densities
-compute_densities <- function(location, bw, method, filtered_objects) {
+compute_densities <- function(location, bw, method, filtered_objects, adaptive) {
   sg_road_filtered <- filtered_objects$sg_road_filtered
   events_filtered <- filtered_objects$events_filtered
+  lixel_length <- bw / 5
   
-  lixels <- lixelize_lines(sg_road_filtered, 500, mindist = 100)
+  lixels <- lixelize_lines(sg_road_filtered, lixel_length, mindist = 50)
   samples <- lines_center(lixels)
   
   densities <- nkde(sg_road_filtered, 
@@ -75,21 +75,31 @@ compute_densities <- function(location, bw, method, filtered_objects) {
                     w = rep(1, nrow(events_filtered)),
                     samples = samples,
                     kernel_name = "quartic",
-                    bw = bw, div = "bw", 
+                    bw = bw, div = "bw", adaptive = as.logical(adaptive), trim_bw = if(as.logical(adaptive)) bw * 2 else NA,
                     method = tolower(method), digits = 1, tol = 1,
                     grid_shape = c(1, 1), max_depth = 8,
                     agg = 5, 
                     sparse = TRUE,
                     verbose = FALSE)
   
+  if (as.logical(adaptive)) {
+    densities <- densities$k
+  }
+  
+  # Rescaling to help the mapping
   samples$density <- densities
+  lixels$density <- densities
   samples$density <- samples$density * 1000
+  lixels$density <- lixels$density * 1000
   
-  # Merge samples with sg_road_filtered to get name in the samples
-  samples_with_name <- samples %>%
-    st_join(sg_road_filtered, join = st_nearest_feature)
+  colorRamp <- c("lightblue", "lemonchiffon", "lightpink", "indianred", "firebrick")
   
-  samples_with_name
+  # Plot the result
+  plot <- tm_shape(lixels) + 
+    tm_lines(col = "density", id = "name", size = 2, style = "kmeans", n=5, palette = colorRamp) + 
+    tm_view(set.zoom.limits = c(11, 16), set.view = 14)
+  
+  plot
 }
 
 #### UI ####
@@ -115,6 +125,7 @@ ui <- dashboardPage(
                                             "Continuous" = "continuous",
                                             "Discontinuous" = "discontinuous"),
                                 selected = "discontinuous"),
+                    radioButtons("adaptive_pickup", "Estimator Type:", choices = c("Fixed" = FALSE, "Adaptive" = TRUE), selected = FALSE),
                     actionButton("compute_bw_pickup", "Compute Optimal Bandwidth"),
                     tags$br(), tags$br(), # Added space
                     uiOutput("bw_input_ui_pickup"), # Dynamic UI for bandwidth input
@@ -140,6 +151,7 @@ ui <- dashboardPage(
                                             "Continuous" = "continuous",
                                             "Discontinuous" = "discontinuous"),
                                 selected = "discontinuous"),
+                    radioButtons("adaptive_dropoff", "Estimator Type:", choices = c("Fixed" = FALSE, "Adaptive" = TRUE), selected = FALSE),
                     actionButton("compute_bw_dropoff", "Compute Optimal Bandwidth"),
                     tags$br(), tags$br(), # Added space
                     uiOutput("bw_input_ui_dropoff"), # Dynamic UI for bandwidth input
@@ -206,9 +218,10 @@ server <- function(input, output, session) {
     location <- input$location_pickup
     bw <- if (is.null(input$bw_pickup)) 300 else input$bw_pickup
     method <- input$method_pickup
+    adaptive <- as.logical(input$adaptive_pickup)
     
     output$title_pickup <- renderText({
-      paste0("Pickup events density by kilometers in 2019, within a radius of ", bw, "m in ", location, "\n")
+      paste0("Pickup events density by kilometres in 2019, within a radius of ", bw, "m in ", location, "\n")
     })
     
     output$densityPlot_pickup <- renderTmap({
@@ -216,18 +229,7 @@ server <- function(input, output, session) {
       
       withProgress(message = "Generating pickup density plot", {
         filtered_objects <- filter_by_location(location, "pickup")
-        samples <- compute_densities(location, bw, method, filtered_objects)
-        samples2 <- samples[order(samples$density),]
-        
-        colorRamp <- brewer.pal(n = 7, name = "Spectral")
-        colorRamp <- rev(colorRamp)
-        
-        plot <- tm_shape(filtered_objects$sg_road_filtered) + 
-          tm_lines("black", id = "name") + 
-          tm_shape(samples2) + 
-          tm_dots("density", id = "name", style = "kmeans", palette = colorRamp, n = 7, size = 0.05) + 
-          tm_layout(legend.outside = TRUE) + 
-          tm_view(set.zoom.limits = c(11, 15), set.view = 14)
+        plot <- compute_densities(location, bw, method, filtered_objects, adaptive)
         
         plot
       })
@@ -240,9 +242,10 @@ server <- function(input, output, session) {
     location <- input$location_dropoff
     bw <- if (is.null(input$bw_dropoff)) 300 else input$bw_dropoff
     method <- input$method_dropoff
+    adaptive <- as.logical(input$adaptive_dropoff)
     
     output$title_dropoff <- renderText({
-      paste0("Dropoff events density by kilometers in 2019, within a radius of ", bw, "m in ", location, "\n")
+      paste0("Dropoff events density by kilometres in 2019, within a radius of ", bw, "m in ", location, "\n")
     })
     
     output$densityPlot_dropoff <- renderTmap({
@@ -250,18 +253,7 @@ server <- function(input, output, session) {
       
       withProgress(message = "Generating dropoff density plot", {
         filtered_objects <- filter_by_location(location, "dropoff")
-        samples <- compute_densities(location, bw, method, filtered_objects)
-        samples2 <- samples[order(samples$density),]
-        
-        colorRamp <- brewer.pal(n = 7, name = "Spectral")
-        colorRamp <- rev(colorRamp)
-        
-        plot <- tm_shape(filtered_objects$sg_road_filtered) + 
-          tm_lines("black", id = "name") + 
-          tm_shape(samples2) + 
-          tm_dots("density", id = "name", style = "kmeans", palette = colorRamp, n = 7, size = 0.05) + 
-          tm_layout(legend.outside = TRUE) + 
-          tm_view(set.zoom.limits = c(11, 15), set.view = 14)
+        plot <- compute_densities(location, bw, method, filtered_objects, adaptive)
         
         plot
       })
@@ -270,13 +262,13 @@ server <- function(input, output, session) {
   
   output$plotUI_pickup <- renderUI({
     if (plot_generated_pickup()) {
-      withSpinner(tmapOutput("densityPlot_pickup"))
+      withSpinner(tmapOutput("densityPlot_pickup", height = "600px"))
     }
   })
   
   output$plotUI_dropoff <- renderUI({
     if (plot_generated_dropoff()) {
-      withSpinner(tmapOutput("densityPlot_dropoff"))
+      withSpinner(tmapOutput("densityPlot_dropoff", height = "600px"))
     }
   })
   
@@ -285,6 +277,7 @@ server <- function(input, output, session) {
     shinyjs::reset("location_pickup")
     shinyjs::reset("method_pickup")
     shinyjs::reset("compute_bw_pickup")
+    shinyjs::reset("adaptive_pickup")
     plot_generated_pickup(FALSE)
   })
   
@@ -293,6 +286,7 @@ server <- function(input, output, session) {
     shinyjs::reset("location_dropoff")
     shinyjs::reset("method_dropoff")
     shinyjs::reset("compute_bw_dropoff")
+    shinyjs::reset("adaptive_dropoff")
     plot_generated_dropoff(FALSE)
   })
 }

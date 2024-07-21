@@ -1,6 +1,0 @@
----
-pagetitle: TNKDE Analysis | Capstone
-title: TNKDE Analysis (1)
----
-
-![](/Images/5.png)
