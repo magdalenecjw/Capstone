@@ -13,7 +13,7 @@ planning_areas <- sort(str_to_title(unique(sg_road$PLN_AREA_N)))
 
 #### Define Functions ####
 
-# Define a function to filter by location and data type
+# Function to filter by location and data type
 filter_by_location <- function(location, data_type) {
   sg_road_filtered <- sg_road %>%
     filter(PLN_AREA_N == toupper(location)) %>%
@@ -35,7 +35,7 @@ filter_by_location <- function(location, data_type) {
        events_filtered = events_filtered)
 }
 
-# Define a function to compute optimal bandwidth
+# Function to compute optimal bandwidth
 compute_optimal_bw <- function(filtered_objects, method) {
   sg_road_filtered <- filtered_objects$sg_road_filtered
   events_filtered <- filtered_objects$events_filtered
@@ -51,18 +51,17 @@ compute_optimal_bw <- function(filtered_objects, method) {
     sparse = TRUE, grid_shape = c(1, 1),
     verbose = FALSE, check = TRUE)
   
-  # Function to get the corresponding bw value for the lowest cv_score in each column
+  # Get corresponding bw value for the lowest cv_score in each column
   get_max_bw <- function(cv_values) {
     sapply(cv_values[-1], function(x) cv_values$bw[which.max(x)])
   }
   
-  # Get the corresponding bw values for the lowest cv_scores
   max_bw_values <- get_max_bw(bw_list)
   max_bw_values
 }
 
-# Define a function to compute densities
-compute_densities <- function(location, bw, method, filtered_objects, adaptive) {
+# Function to compute densities
+compute_densities <- function(location, bw, method, filtered_objects, adaptive, show_basemap) {
   sg_road_filtered <- filtered_objects$sg_road_filtered
   events_filtered <- filtered_objects$events_filtered
   lixel_length <- bw / 5
@@ -92,12 +91,19 @@ compute_densities <- function(location, bw, method, filtered_objects, adaptive) 
   samples$density <- samples$density * 1000
   lixels$density <- lixels$density * 1000
   
-  colorRamp <- c("lightblue", "lemonchiffon", "lightpink", "indianred", "firebrick")
+  colorRamp <- c("skyblue", "gold", "lightpink", "indianred", "firebrick")
   
   # Plot the result
-  plot <- tm_shape(lixels) + 
-    tm_lines(col = "density", id = "name", size = 2, style = "kmeans", n=5, palette = colorRamp) + 
-    tm_view(set.zoom.limits = c(11, 16), set.view = 14)
+  plot <- if(show_basemap) {
+    tm_basemap(leaflet::providers$Esri.WorldTopoMap) + 
+      tm_shape(lixels) + 
+      tm_lines(col = "density", id = "name", size = 5, style = "kmeans", n=5, palette = colorRamp) + 
+      tm_view(set.zoom.limits = c(11, 16), set.view = 14)
+  } else {
+    tm_shape(lixels) + 
+      tm_lines(col = "density", id = "name", size = 5, style = "kmeans", n=5, palette = colorRamp) + 
+      tm_view(set.zoom.limits = c(11, 16), set.view = 14)
+  }
   
   plot
 }
@@ -127,15 +133,16 @@ ui <- dashboardPage(
                                 selected = "discontinuous"),
                     radioButtons("adaptive_pickup", "Estimator Type:", choices = c("Fixed" = FALSE, "Adaptive" = TRUE), selected = FALSE),
                     actionButton("compute_bw_pickup", "Compute Optimal Bandwidth"),
-                    tags$br(), tags$br(), # Added space
-                    uiOutput("bw_input_ui_pickup"), # Dynamic UI for bandwidth input
-                    actionButton("plot_pickup", "Generate Plot"), # Always visible
-                    tags$br(), tags$br(), # Added space for reset button
-                    actionButton("reset_pickup", "Reset") # Added reset button
-                    , style = "min-width: 250px;"), # Added style for minimum width
+                    tags$br(), tags$br(),
+                    uiOutput("bw_input_ui_pickup"), # Bandwidth input
+                    checkboxInput("show_basemap_pickup", "Show Basemap", value = TRUE),
+                    actionButton("plot_pickup", "Generate Plot"),
+                    tags$br(), tags$br(),
+                    actionButton("reset_pickup", "Reset")
+                    , style = "min-width: 250px;"),
                   mainPanel(
-                    textOutput("title_pickup"), # Output for title
-                    uiOutput("plotUI_pickup") # Use uiOutput to conditionally show the plot
+                    textOutput("title_pickup"),
+                    uiOutput("plotUI_pickup") 
                   )
                 )
               )
@@ -153,15 +160,16 @@ ui <- dashboardPage(
                                 selected = "discontinuous"),
                     radioButtons("adaptive_dropoff", "Estimator Type:", choices = c("Fixed" = FALSE, "Adaptive" = TRUE), selected = FALSE),
                     actionButton("compute_bw_dropoff", "Compute Optimal Bandwidth"),
-                    tags$br(), tags$br(), # Added space
-                    uiOutput("bw_input_ui_dropoff"), # Dynamic UI for bandwidth input
-                    actionButton("plot_dropoff", "Generate Plot"), # Always visible
-                    tags$br(), tags$br(), # Added space for reset button
-                    actionButton("reset_dropoff", "Reset") # Added reset button
-                    , style = "min-width: 250px;"), # Added style for minimum width
+                    tags$br(), tags$br(),
+                    uiOutput("bw_input_ui_dropoff"), # Bandwidth input
+                    checkboxInput("show_basemap_dropoff", "Show Basemap", value = TRUE), 
+                    actionButton("plot_dropoff", "Generate Plot"), 
+                    tags$br(), tags$br(),
+                    actionButton("reset_dropoff", "Reset") 
+                    , style = "min-width: 250px;"), 
                   mainPanel(
-                    textOutput("title_dropoff"), # Output for title
-                    uiOutput("plotUI_dropoff") # Use uiOutput to conditionally show the plot
+                    textOutput("title_dropoff"), 
+                    uiOutput("plotUI_dropoff") 
                   )
                 )
               )
@@ -188,7 +196,7 @@ server <- function(input, output, session) {
         numericInput("bw_pickup", "Bandwidth (bw):", value = max_bw_values[1], min = 50, max = 1000)
       })
       
-      shinyjs::show("plot_pickup") # Ensure the plot button is always visible
+      shinyjs::show("plot_pickup")
     })
   })
   
@@ -201,10 +209,12 @@ server <- function(input, output, session) {
       optimal_bw_dropoff(max_bw_values)
       
       output$bw_input_ui_dropoff <- renderUI({
-        numericInput("bw_dropoff", "Bandwidth (bw):", value = max_bw_values[1], min = 50, max = 1000)
+        numericInput("bw_dropoff", "Bandwidth (bw):", value =
+
+ max_bw_values[1], min = 50, max = 1000)
       })
       
-      shinyjs::show("plot_dropoff") # Ensure the plot button is always visible
+      shinyjs::show("plot_dropoff") 
     })
   })
   
@@ -219,6 +229,7 @@ server <- function(input, output, session) {
     bw <- if (is.null(input$bw_pickup)) 300 else input$bw_pickup
     method <- input$method_pickup
     adaptive <- as.logical(input$adaptive_pickup)
+    show_basemap <- input$show_basemap_pickup
     
     output$title_pickup <- renderText({
       paste0("Pickup events density by kilometres in 2019, within a radius of ", bw, "m in ", location, "\n")
@@ -229,7 +240,7 @@ server <- function(input, output, session) {
       
       withProgress(message = "Generating pickup density plot", {
         filtered_objects <- filter_by_location(location, "pickup")
-        plot <- compute_densities(location, bw, method, filtered_objects, adaptive)
+        plot <- compute_densities(location, bw, method, filtered_objects, adaptive, show_basemap)
         
         plot
       })
@@ -243,6 +254,7 @@ server <- function(input, output, session) {
     bw <- if (is.null(input$bw_dropoff)) 300 else input$bw_dropoff
     method <- input$method_dropoff
     adaptive <- as.logical(input$adaptive_dropoff)
+    show_basemap <- input$show_basemap_dropoff
     
     output$title_dropoff <- renderText({
       paste0("Dropoff events density by kilometres in 2019, within a radius of ", bw, "m in ", location, "\n")
@@ -253,7 +265,7 @@ server <- function(input, output, session) {
       
       withProgress(message = "Generating dropoff density plot", {
         filtered_objects <- filter_by_location(location, "dropoff")
-        plot <- compute_densities(location, bw, method, filtered_objects, adaptive)
+        plot <- compute_densities(location, bw, method, filtered_objects, adaptive, show_basemap)
         
         plot
       })
