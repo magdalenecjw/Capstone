@@ -17,7 +17,7 @@ The packages used are:
 -   tmap package is used to visualize geospatial data on maps.
 
 ```{r}
-pacman::p_load(sf, tidyverse, spatstat, lubridate, tmap, spNetwork, RColorBrewer)
+pacman::p_load(sf, tidyverse, spatstat, lubridate, tmap, spNetwork, RColorBrewer, leaflet)
 ```
 
 In the code chunk below, the [cleaned data files](DataPrep.qmd) are loaded into R.
@@ -115,7 +115,7 @@ filter_data <- function(location) {
        pickup_filtered = pickup_filtered)
 }
 
-filtered_objects <- filter_data("ORCHARD")
+filtered_objects <- filter_data("DOWNTOWN CORE")
 
 # Access the filtered objects
 sg_road_filtered <- filtered_objects$sg_road_filtered
@@ -175,12 +175,21 @@ samples$density <- densities
 lixels$density <- densities
 samples$density <- samples$density*1000
 lixels$density <- lixels$density*1000
-  
-colorRamp <- c("lightblue", "lemonchiffon", "lightpink", "indianred", "firebrick")
-  
-# Plot the result
-tm_shape(lixels) + 
-  tm_lines(col = "density", id = "name", size = 2, style = "kmeans", n=5, palette = colorRamp) + 
-  tm_view(set.zoom.limits = c(11, 16), set.view = 14)
+
+# Transform lixels to WGS84
+lixels <- st_transform(lixels, crs = 4326)
+
+# Create a color palette based on the density column using kmeans
+n <- 5
+kmeans_bins <- kmeans(lixels$density, centers = n)$centers
+color_pal <- colorNumeric(palette = c("lightblue", "lemonchiffon", "lightpink", "indianred", "firebrick"), 
+                          domain = lixels$density)
+
+# Create the leaflet map
+leaflet(data = lixels) %>%
+  addTiles() %>%
+  addPolylines(color = ~color_pal(density), weight = 2, label = ~name) %>%
+  setView(lng = mean(st_coordinates(lixels)[, 1]), lat = mean(st_coordinates(lixels)[, 2]), zoom = 14) %>%
+  addLegend("bottomright", pal = color_pal, values = ~density, title = "Density", labFormat = labelFormat())
 ```
 
