@@ -41,7 +41,7 @@ compute_optimal_bw <- function(filtered_objects, method) {
   events_filtered <- filtered_objects$events_filtered
   
   bw_list <- bw_cv_likelihood_calc(
-    bws = seq(100, 1000, 50),
+    c(100, 1000), 50,
     lines = sg_road_filtered, 
     events = events_filtered,
     w = rep(1, nrow(events_filtered)),

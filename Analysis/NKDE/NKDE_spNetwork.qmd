@@ -128,24 +128,26 @@ rm(filtered_objects)
 
 ```{r}
 #| eval: false
-bw_cv_simple <- bw_cv_likelihood_calc(
-  bws = seq(50,1000,50),
-  lines = sg_road_filtered, 
-  events = pickup_filtered,
-  w = rep(1,nrow(pickup_filtered)),
-  kernel_name = "quartic", method = "discontinuous",
-  max_depth = 8,
-  digits=2, tol=0.1, agg=5,
-  sparse=TRUE, grid_shape=c(1,1),
-  verbose=FALSE, check=TRUE)
+bw_list <- bw_cv_likelihood_calc(
+    c(100, 1000), 50,
+    lines = sg_road_filtered, 
+    events = pickup_filtered,
+    w = rep(1, nrow(pickup_filtered)),
+    kernel_name = "quartic", method = "simple",
+    max_depth = 8,
+    digits = 2, tol = 0.1, agg = 5,
+    sparse = TRUE, grid_shape = c(1, 1),
+    verbose = FALSE, check = TRUE)
 
 # Function to get the corresponding bw value for the lowest cv_score in each column
-get_max_bw <- function(cv_values) {
-  sapply(cv_values[-1], function(x) cv_values$bw[which.max(x)])
+get_max_bw <- function(df) {
+  min_index <- which.min(df$cv_scores)
+  bw_value <- df$bw[min_index]
+  return(bw_value)
 }
 
 # Get the corresponding bw values for the lowest cv_scores
-max_bw_values <- get_max_bw(bw_cv_simple)
+max_bw_values <- get_max_bw(bw_list)
 
 # Print the results
 print(max_bw_values)
