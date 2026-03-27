@@ -65,8 +65,8 @@ The project culminates in **Grabny**, an interactive Shiny web application that 
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/magdalenecjw/Capstone.git
-   cd your-repo-name
+   git clone https://github.com/magdalenecjw/grabny.git
+   cd grabny
    ```
 
 2. Open `Capstone.Rproj` in RStudio.
