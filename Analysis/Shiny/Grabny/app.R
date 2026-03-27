@@ -110,7 +110,7 @@ compute_densities <- function(location, bw, method, filtered_objects, adaptive, 
 
 #### UI ####
 ui <- dashboardPage(
-  dashboardHeader(title = "NKDE Analysis"),
+  dashboardHeader(title = "Grabny"),
   dashboardSidebar(
     sidebarMenu(
       menuItem("Pickup", tabName = "pickup", icon = icon("car")),
