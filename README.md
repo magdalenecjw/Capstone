@@ -1,9 +1,109 @@
-###	Introduction
-Traditional spatial point pattern analysis (SPPA) methods like Kernel Density Estimation (KDE) and Temporal KDE are commonly used for mapping the distribution of spatial events. Yet, these conventional techniques often fall short in accurately analyzing events with spatial constraints, as they are designed for planar environments (Xie & Yan, 2008). In reality, many real-world events are bound by network constraints like roads, paths, or urban grids. Examples of such events are traffic accidents and GPS trajectories of vehicles which occur on road networks. As conventional approaches cannot account for such constraints, the true patterns of spatial events and their temporal dynamics are often not fully revealed.
+# Spatial Analysis of Ride-Hailing Patterns in Singapore
 
-Given these limitations, it is necessary to explore the potential of advanced SPPA techniques that are tailored for networked settings. Approaches like Network KDE (NKDE) and Temporal Network KDE (TNKDE) are designed to detect the patterns of events occurring along or within networks and promise a truer depiction of reality with the incorporation of spatial configurations into their analyses. By doing so, they aim to improve our understanding of spatial events in networked contexts, thereby offering more effective tools for urban and transportation planning, management, and decision-making.
+This project analyses large-scale Grab ride-hailing pick-up and drop-off trajectory data in Singapore using spatial analysis techniques, including Kernel Density Estimation (KDE) and Network Kernel Density Estimation (NKDE).
 
-###	Problem Statement and Objectives
-With exponential growth of online ride-hailing apps over the last decade, private hire vehicles (PHVs) have become an integral part of public transport systems. Between November 2020 and July 2023, the average daily ridership on PHVs in Singapore has increased by close to 20% (Lee, 2023). Yet, the availability and reliability of such rides are not always consistent. For example, with closure of public transportation services close at night, demand for online ride-hailing services around recreational areas may surge. However, there may not always be a sufficient supply of PHVs in the immediate vicinity, resulting in longer waiting times as commuters are matched with PHVs that are located further. As such, there is value in performing in-depth analysis on such ridership data to better guide online ride-hailing service providers and relevant authorities on decision-making relating to service coverage and urban planning. 
+---
 
-This study attempts to analyse ride density in Singapore across regions and time using 1st Order SPPA methods of KDE, NKDE and TNKDE. By identifying and visualizing regions of high concentrations of online ride-hailing trips, it may be possible to group regions with similar ride demand, which in turn, would be useful for optimizing service coverage. 
+## Overview
+
+Traditional spatial KDE struggles to accurately analyse point patterns constrained by road networks. This project addresses that limitation by applying NKDE to better detect travel demand patterns along road networks — enabling transportation service providers to optimise service efficiency, and urban planners to study pick-up/drop-off zone design and manage traffic flows.
+
+The project culminates in **Grabny**, an interactive Shiny web application that allows non-technical users to implement and visualise NKDE models without any programming knowledge.
+
+---
+
+## Features
+
+- **Data Preparation** — Cleaning and preprocessing of large-scale Grab trajectory data
+- **KDE Analysis** — Spatial and spatio-temporal kernel density estimation using `spatstat` and `ks`
+- **NKDE Analysis** — Network-constrained KDE using the `spNetwork` R package, with support for multiple NKDE methods and adaptive bandwidths
+- **Grabny App** — A user-friendly web application featuring:
+  - Data-driven optimal bandwidth selection tool
+  - NKDE modelling tool with choice of fixed or adaptive bandwidth estimators
+  - Interactive map visualisation of road segment densities, with and without basemap
+
+---
+
+## Project Structure
+
+```
+.
+├── Analysis/
+│   ├── KDE/          # Spatial & spatio-temporal KDE notebooks
+│   ├── NKDE/         # Network KDE notebooks & output visualisations
+│   ├── Setup/        # Data preparation & preprocessing
+│   └── Shiny/
+│       └── Grabny/   # Shiny web application
+├── Images/           # Project images and logo
+├── _quarto.yml       # Quarto site configuration
+├── index.qmd         # Site homepage
+├── about.qmd         # About page
+└── styles.css / styles.scss
+```
+
+---
+
+## Tech Stack
+
+| Tool | Purpose |
+|---|---|
+| R | Primary analysis language |
+| Quarto | Project blog / documentation site |
+| Shiny | Interactive web application |
+| `spNetwork` | Network KDE implementation |
+| `spatstat` | Spatial KDE |
+| `ks` | Temporal KDE |
+| Leaflet | Interactive map visualisation |
+| Netlify | Blog hosting |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- R (≥ 4.0)
+- RStudio
+- Quarto CLI
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/magdalenecjw/Capstone.git
+   cd your-repo-name
+   ```
+
+2. Open `Capstone.Rproj` in RStudio.
+
+3. Install the required R packages:
+   ```r
+   install.packages(c("shiny", "spNetwork", "spatstat", "ks", "leaflet", "tidyverse"))
+   ```
+
+### Running the Shiny App
+
+Open the `Analysis/Shiny/Grabny/` folder in RStudio and run:
+
+```r
+shiny::runApp("Analysis/Shiny/Grabny")
+```
+
+---
+
+## Documentation
+
+Full data exploration, methodology, and findings are documented on the project blog:
+[capstonejourney.netlify.app](https://capstonejourney.netlify.app)
+
+---
+
+## Acknowledgements
+
+This project was developed as part of the capstone requirement for the Master of IT in Business programme at Singapore Management University (SMU), under the supervision of Prof Kam Tin Seong. Ride-hailing trajectory data is sourced from the Grab-Posisi dataset (Huang et al., 2019).
+
+---
+
+## References
+
+Huang, X., Yin, Y., Lim, S., Wang, G., Hu, B., Varadarajan, J., Zheng, S., Bulusu, A., & Zimmermann, R. (2019). Grab-Posisi. Proceedings of the 3rd ACM SIGSPATIAL International Workshop on Prediction of Human Mobility, 1–10. https://doi.org/10.1145/3356995.3364536
