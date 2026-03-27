@@ -1,6 +1,6 @@
-# Spatial Analysis of Ride-Hailing Patterns in Singapore
+# Grabny: Spatial Analysis of Ride-Hailing Patterns in Singapore
 
-This project analyses large-scale Grab ride-hailing pick-up and drop-off trajectory data in Singapore using spatial analysis techniques, including Kernel Density Estimation (KDE) and Network Kernel Density Estimation (NKDE).
+Grabny is a Shiny web application that allows non-technical users to perform and visualise Network Kernel Density Estimation (NKDE) on road networks — no programming required. It was developed as part of my university capstone project analysing large-scale Grab ride-hailing pick-up and drop-off trajectory data in Singapore, using spatial analysis techniques including Kernel Density Estimation (KDE) and NKDE.
 
 
 ## Overview
@@ -94,7 +94,7 @@ Full data exploration, methodology, and findings are documented on the project b
 
 ## Acknowledgements
 
-This project was developed as part of the capstone requirement for the Master of IT in Business programme at Singapore Management University (SMU), under the supervision of Prof Kam Tin Seong. Ride-hailing trajectory data is sourced from the Grab-Posisi dataset (Huang et al., 2019).
+This project was developed as part of my capstone requirement for the Master of IT in Business programme at Singapore Management University (SMU), under the supervision of Prof Kam Tin Seong. Ride-hailing trajectory data is sourced from the Grab-Posisi dataset (Huang et al., 2019).
 
 
 ## References
