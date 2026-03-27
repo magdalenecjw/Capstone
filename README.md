@@ -2,7 +2,6 @@
 
 This project analyses large-scale Grab ride-hailing pick-up and drop-off trajectory data in Singapore using spatial analysis techniques, including Kernel Density Estimation (KDE) and Network Kernel Density Estimation (NKDE).
 
----
 
 ## Overview
 
@@ -10,7 +9,6 @@ Traditional spatial KDE struggles to accurately analyse point patterns constrain
 
 The project culminates in **Grabny**, an interactive Shiny web application that allows non-technical users to implement and visualise NKDE models without any programming knowledge.
 
----
 
 ## Features
 
@@ -22,7 +20,6 @@ The project culminates in **Grabny**, an interactive Shiny web application that 
   - NKDE modelling tool with choice of fixed or adaptive bandwidth estimators
   - Interactive map visualisation of road segment densities, with and without basemap
 
----
 
 ## Project Structure
 
@@ -41,7 +38,6 @@ The project culminates in **Grabny**, an interactive Shiny web application that 
 └── styles.css / styles.scss
 ```
 
----
 
 ## Tech Stack
 
@@ -56,7 +52,6 @@ The project culminates in **Grabny**, an interactive Shiny web application that 
 | Leaflet | Interactive map visualisation |
 | Netlify | Blog hosting |
 
----
 
 ## Getting Started
 
@@ -89,7 +84,6 @@ Open the `Analysis/Shiny/Grabny/` folder in RStudio and run:
 shiny::runApp("Analysis/Shiny/Grabny")
 ```
 
----
 
 ## Documentation
 
@@ -102,7 +96,6 @@ Full data exploration, methodology, and findings are documented on the project b
 
 This project was developed as part of the capstone requirement for the Master of IT in Business programme at Singapore Management University (SMU), under the supervision of Prof Kam Tin Seong. Ride-hailing trajectory data is sourced from the Grab-Posisi dataset (Huang et al., 2019).
 
----
 
 ## References
 
